@@ -242,24 +242,49 @@
     border-color: var(--md-sys-color-primary, #6750a4);
     box-shadow: inset 0 0 0 1px var(--md-sys-color-primary, #6750a4);
   }
+  /* Floating label (M3 outlined field): rests inside the box as the placeholder,
+     then floats up into the border notch on focus or when the field has content.
+     The textarea carries a zero-width-space placeholder so :placeholder-shown
+     gives us an "is empty" hook without showing a second, real placeholder. */
   .field-box .flt-label {
     position: absolute;
-    top: -9px;
-    left: 12px;
-    max-width: calc(100% - 28px);
-    padding: 0 6px;
-    background: var(--md-sys-color-surface-container, #f3edf7);
+    top: 12px;
+    left: 16px;
+    max-width: calc(100% - 32px);
+    padding: 0;
+    background: transparent;
     color: var(--md-sys-color-on-surface-variant, #49454f);
-    font-size: 12px;
-    line-height: 18px;
+    font-size: 16px;
+    line-height: 24px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     pointer-events: none;
     z-index: 1;
+    transition: top 0.2s cubic-bezier(0.2, 0, 0, 1),
+                left 0.2s cubic-bezier(0.2, 0, 0, 1),
+                max-width 0.2s cubic-bezier(0.2, 0, 0, 1),
+                padding 0.2s cubic-bezier(0.2, 0, 0, 1),
+                font-size 0.2s cubic-bezier(0.2, 0, 0, 1),
+                line-height 0.2s cubic-bezier(0.2, 0, 0, 1),
+                background-color 0.2s cubic-bezier(0.2, 0, 0, 1),
+                color 0.2s cubic-bezier(0.2, 0, 0, 1);
+  }
+  .field-box:focus-within .flt-label,
+  .field-box:has(textarea:not(:placeholder-shown)) .flt-label {
+    top: -9px;
+    left: 12px;
+    max-width: calc(100% - 28px);
+    padding: 0 6px;
+    background: var(--md-sys-color-surface-container, #f3edf7);
+    font-size: 12px;
+    line-height: 18px;
   }
   .field-box:focus-within .flt-label {
     color: var(--md-sys-color-primary, #6750a4);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .field-box .flt-label { transition: none; }
   }
   .field-box textarea {
     flex: 1;
@@ -344,22 +369,25 @@
   .lang-group-row m3e-button-group {
     width: 100%;
   }
-  /* Force the language/theme buttons to equal width (ignore content length). */
+  /* Force the language/theme/contrast buttons to equal width (ignore content length). */
   .lang-group-row m3e-button-group m3e-button,
-  .theme-group-row m3e-button-group m3e-button {
+  .theme-group-row m3e-button-group m3e-button,
+  .contrast-group-row m3e-button-group m3e-button {
     flex: 1 1 0;
     min-width: 0;
     justify-content: center;
   }
-  /* Theme selector: same layout as the language selector. */
-  .theme-group-row {
+  /* Theme/contrast selectors: same layout as the language selector. */
+  .theme-group-row,
+  .contrast-group-row {
     display: flex;
     flex-direction: column;
     gap: 8px;
     flex-shrink: 0;
     padding: 4px 0;
   }
-  .theme-group-row m3e-button-group {
+  .theme-group-row m3e-button-group,
+  .contrast-group-row m3e-button-group {
     width: 100%;
   }
   /* Theme color: label, a grid of preset swatches, and a "Material" reset button. */

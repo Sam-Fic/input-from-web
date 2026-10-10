@@ -141,6 +141,10 @@ const I18N = {
     theme_light: "Light",
     theme_dark: "Dark",
     theme_auto: "Auto",
+    contrast_switch_label: "Contrast",
+    contrast_standard: "Standard",
+    contrast_medium: "Medium",
+    contrast_high: "High",
     theme_color_label: "Accent color",
     theme_extract: "Extract from image",
     char_count_label: "chars",
@@ -188,6 +192,10 @@ const I18N = {
     theme_light: "浅色",
     theme_dark: "深色",
     theme_auto: "自动",
+    contrast_switch_label: "对比度",
+    contrast_standard: "标准",
+    contrast_medium: "中等",
+    contrast_high: "高",
     theme_color_label: "主题色",
     theme_extract: "从图片提取",
     char_count_label: "字",
@@ -743,6 +751,37 @@ const THEME_COLOR_KEY = "input-from-web-theme-color";
 let themeColor = localStorage.getItem(THEME_COLOR_KEY) || "material";
 applyTheme(THEME);
 syncThemeGroup();
+
+/* --- Contrast selector (standard / medium / high) ---
+   Drives <m3e-theme>'s contrast level, which re-tones the generated palette.
+   Purely a UI preference, persisted in localStorage. */
+const CONTRAST_STORAGE_KEY = "input-from-web-contrast";
+const contrastGroup = document.getElementById("contrast-group");
+
+function applyContrast(contrast) {
+  if (appTheme) appTheme.contrast = contrast;
+}
+
+function syncContrastGroup() {
+  for (const btn of contrastGroup.querySelectorAll("m3e-button")) {
+    btn.selected = (btn.dataset.contrast === CONTRAST);
+  }
+}
+
+contrastGroup.addEventListener("change", () => {
+  for (const btn of contrastGroup.querySelectorAll("m3e-button")) {
+    if (btn.selected) {
+      CONTRAST = btn.dataset.contrast;
+      break;
+    }
+  }
+  localStorage.setItem(CONTRAST_STORAGE_KEY, CONTRAST);
+  applyContrast(CONTRAST);
+});
+
+let CONTRAST = localStorage.getItem(CONTRAST_STORAGE_KEY) || "standard";
+applyContrast(CONTRAST);
+syncContrastGroup();
 
 /* --- Accent color (theme color) ---
    The seed color is taken from a user-picked image via getColorFromImage (see the

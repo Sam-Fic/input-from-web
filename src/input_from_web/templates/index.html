@@ -26,8 +26,11 @@
      app.js later re-applies the same value; this just removes the dependency on its timing. -->
 <script>
   try {
+    var _t = document.getElementById("app-theme");
     var _c = localStorage.getItem("input-from-web-theme-color");
-    if (_c && _c !== "material") document.getElementById("app-theme").setAttribute("color", _c);
+    if (_c && _c !== "material") _t.setAttribute("color", _c);
+    var _k = localStorage.getItem("input-from-web-contrast");
+    if (_k && _k !== "standard") _t.setAttribute("contrast", _k);
   } catch (e) {}
 </script>
 <div class="app-container">
@@ -46,7 +49,7 @@
   <div class="input-field">
     <div class="field-box">
       <label class="flt-label" for="txt">__LABEL_TYPE_HERE__</label>
-      <textarea id="txt" rows="4" autofocus></textarea>
+      <textarea id="txt" rows="4" placeholder="&#8203;"></textarea>
     </div>
   </div>
 
@@ -119,6 +122,15 @@
         <m3e-button variant="tonal" toggle data-theme="light" data-i18n="theme_light">浅色</m3e-button>
         <m3e-button variant="tonal" toggle data-theme="dark" data-i18n="theme_dark">深色</m3e-button>
         <m3e-button variant="tonal" toggle data-theme="auto" data-i18n="theme_auto">自动</m3e-button>
+      </m3e-button-group>
+    </div>
+
+    <div class="contrast-group-row">
+      <span class="autostart-label" data-i18n="contrast_switch_label">对比度</span>
+      <m3e-button-group variant="connected" id="contrast-group">
+        <m3e-button variant="tonal" toggle data-contrast="standard" data-i18n="contrast_standard">标准</m3e-button>
+        <m3e-button variant="tonal" toggle data-contrast="medium" data-i18n="contrast_medium">中等</m3e-button>
+        <m3e-button variant="tonal" toggle data-contrast="high" data-i18n="contrast_high">高</m3e-button>
       </m3e-button-group>
     </div>
 
