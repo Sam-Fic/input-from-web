@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content">
-<meta name="theme-color" content="#6750A4">
+<meta name="theme-color" content="#F5EBF6">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <!-- Apply the saved theme before first paint to avoid a flash of the wrong palette. -->
 <script src="/static/theme-init.js"></script>
@@ -20,7 +20,7 @@
 </head>
 <body>
 <div id="theme-host" style="display:contents">
-<m3e-theme id="app-theme" variant="tonal-spot" color="#6750A4" scheme="auto" style="display:contents">
+<m3e-theme id="app-theme" variant="expressive" color="#6750A4" scheme="auto" style="display:contents">
 <!-- Seed <m3e-theme> with the saved accent BEFORE it upgrades, so it generates the
      user palette from the very first paint (no Material-default-purple flash during load).
      app.js later re-applies the same value; this just removes the dependency on its timing. -->
@@ -73,74 +73,116 @@
 <m3e-bottom-sheet id="settings-sheet" modal handle hideable detents="fit" aria-labelledby="settings-sheet-header">
   <div slot="header" id="settings-sheet-header" class="sheet-header" data-i18n="settings_title">设置</div>
   <div class="sheet-body">
-    <div class="autostart-row">
-      <span class="autostart-label" data-i18n="autostart_label">开机自启（登录后自动弹终端显示二维码）</span>
-      <m3e-switch id="autostart-switch"></m3e-switch>
-    </div>
+    <m3e-list variant="segmented" class="settings-list">
+      <m3e-list-item>
+        <span class="autostart-label" data-i18n="autostart_label">开机自启（登录后自动弹终端显示二维码）</span>
+        <m3e-switch slot="trailing" icons="both" id="autostart-switch"></m3e-switch>
+      </m3e-list-item>
 
-    <div class="autostart-row">
-      <span class="autostart-label" data-i18n="method_label">剪贴板模式（复制粘贴，而非直接键入）</span>
-      <m3e-switch id="method-switch"></m3e-switch>
-    </div>
+      <m3e-list-item>
+        <span class="autostart-label" data-i18n="method_label">剪贴板模式（复制粘贴，而非直接键入）</span>
+        <m3e-switch slot="trailing" icons="both" id="method-switch"></m3e-switch>
+      </m3e-list-item>
 
-    <div class="autostart-row">
-      <span class="autostart-label" data-i18n="auto_paste_label">复制后自动粘贴（剪贴板模式下生效）</span>
-      <m3e-switch id="auto-paste-switch"></m3e-switch>
-    </div>
+      <m3e-list-item>
+        <span class="autostart-label" data-i18n="auto_paste_label">复制后自动粘贴（剪贴板模式下生效）</span>
+        <m3e-switch slot="trailing" icons="both" id="auto-paste-switch"></m3e-switch>
+      </m3e-list-item>
 
-    <div class="autostart-row">
-      <span class="autostart-label" data-i18n="paste_key_label">粘贴快捷键使用 Ctrl+Shift+V（默认 Ctrl+V）</span>
-      <m3e-switch id="paste-key-switch"></m3e-switch>
-    </div>
+      <m3e-list-item>
+        <span class="autostart-label" data-i18n="paste_key_label">粘贴快捷键使用 Ctrl+Shift+V（默认 Ctrl+V）</span>
+        <m3e-switch slot="trailing" icons="both" id="paste-key-switch"></m3e-switch>
+      </m3e-list-item>
 
-    <div class="autostart-row">
-      <span class="autostart-label" data-i18n="enter_label">发送后自动按 Enter</span>
-      <m3e-switch id="enter-switch"></m3e-switch>
-    </div>
+      <m3e-list-item>
+        <span class="autostart-label" data-i18n="enter_label">发送后自动按 Enter</span>
+        <m3e-switch slot="trailing" icons="both" id="enter-switch"></m3e-switch>
+      </m3e-list-item>
 
-    <div class="autostart-row">
-      <span class="autostart-label" data-i18n="voice_label">语音指令：说 “send” 自动发送</span>
-      <m3e-switch id="voice-switch"></m3e-switch>
-    </div>
+      <m3e-list-item>
+        <span class="autostart-label" data-i18n="voice_label">语音指令：说 “send” 自动发送</span>
+        <m3e-switch slot="trailing" icons="both" id="voice-switch"></m3e-switch>
+      </m3e-list-item>
 
-    <div class="autostart-row">
-      <span class="autostart-label" data-i18n="token_label">启用安全令牌（URL 携带密钥）</span>
-      <m3e-switch id="token-switch"></m3e-switch>
-    </div>
+      <m3e-list-item>
+        <span class="autostart-label" data-i18n="token_label">启用安全令牌（URL 携带密钥）</span>
+        <m3e-switch slot="trailing" icons="both" id="token-switch"></m3e-switch>
+      </m3e-list-item>
 
-    <div class="lang-group-row">
-      <span class="autostart-label" data-i18n="lang_switch_label">界面语言</span>
-      <m3e-button-group variant="connected" id="lang-group">
-        <m3e-button variant="tonal" toggle data-lang="zh">中文</m3e-button>
-        <m3e-button variant="tonal" toggle data-lang="en">English</m3e-button>
-      </m3e-button-group>
-    </div>
+      <!-- Value rows: title on the start side, current value on the trailing
+           side. The trailing m3e-button hosts an m3e-menu-trigger, so the menu
+           is anchored to (and labelled by) the button. -->
+      <m3e-list-item>
+        <span class="autostart-label" data-i18n="lang_switch_label">界面语言</span>
+        <m3e-button slot="trailing" variant="text" size="small" class="settings-option" id="lang-btn">
+          <m3e-menu-trigger for="lang-menu">
+            <span class="sr-only" data-i18n="lang_switch_label">界面语言</span>
+            <span class="settings-option-value" id="lang-value">中文</span>
+          </m3e-menu-trigger>
+        </m3e-button>
+      </m3e-list-item>
 
-    <div class="theme-group-row">
-      <span class="autostart-label" data-i18n="theme_switch_label">主题</span>
-      <m3e-button-group variant="connected" id="theme-group">
-        <m3e-button variant="tonal" toggle data-theme="light" data-i18n="theme_light">浅色</m3e-button>
-        <m3e-button variant="tonal" toggle data-theme="dark" data-i18n="theme_dark">深色</m3e-button>
-        <m3e-button variant="tonal" toggle data-theme="auto" data-i18n="theme_auto">自动</m3e-button>
-      </m3e-button-group>
-    </div>
+      <m3e-list-item>
+        <span class="autostart-label" data-i18n="theme_switch_label">主题</span>
+        <m3e-button slot="trailing" variant="text" size="small" class="settings-option" id="theme-btn">
+          <m3e-menu-trigger for="theme-menu">
+            <span class="sr-only" data-i18n="theme_switch_label">主题</span>
+            <span class="settings-option-value" id="theme-value" data-i18n="theme_auto">自动</span>
+          </m3e-menu-trigger>
+        </m3e-button>
+      </m3e-list-item>
 
-    <div class="contrast-group-row">
-      <span class="autostart-label" data-i18n="contrast_switch_label">对比度</span>
-      <m3e-button-group variant="connected" id="contrast-group">
-        <m3e-button variant="tonal" toggle data-contrast="standard" data-i18n="contrast_standard">标准</m3e-button>
-        <m3e-button variant="tonal" toggle data-contrast="medium" data-i18n="contrast_medium">中等</m3e-button>
-        <m3e-button variant="tonal" toggle data-contrast="high" data-i18n="contrast_high">高</m3e-button>
-      </m3e-button-group>
-    </div>
+      <m3e-list-item>
+        <span class="autostart-label" data-i18n="contrast_switch_label">对比度</span>
+        <m3e-button slot="trailing" variant="text" size="small" class="settings-option" id="contrast-btn">
+          <m3e-menu-trigger for="contrast-menu">
+            <span class="sr-only" data-i18n="contrast_switch_label">对比度</span>
+            <span class="settings-option-value" id="contrast-value" data-i18n="contrast_standard">标准</span>
+          </m3e-menu-trigger>
+        </m3e-button>
+      </m3e-list-item>
 
-    <div class="color-row">
-      <span class="autostart-label" data-i18n="theme_color_label">主题色</span>
-      <m3e-button id="theme-extract-btn" variant="tonal" data-i18n="theme_extract">从图片提取</m3e-button>
-      <input type="file" id="wallpaper-input" accept="image/*" hidden>
-    </div>
+      <m3e-list-item>
+        <span class="autostart-label" data-i18n="theme_color_label">主题色</span>
+        <m3e-button slot="trailing" variant="text" size="small" class="settings-option" id="accent-btn">
+          <m3e-menu-trigger for="accent-menu">
+            <span class="sr-only" data-i18n="theme_color_label">主题色</span>
+            <span class="settings-option-value" id="accent-value" data-i18n="accent_default">默认（Material）</span>
+          </m3e-menu-trigger>
+        </m3e-button>
+      </m3e-list-item>
+    </m3e-list>
+
+    <input type="file" id="wallpaper-input" accept="image/*" hidden>
   </div>
 </m3e-bottom-sheet>
+
+<!-- Option menus for the value rows above. They live outside the sheet so the
+     sheet's scroll/containment can never clip the popover. -->
+<m3e-menu id="lang-menu" position-x="before" position-y="below">
+  <m3e-menu-item-radio data-value="zh" checked>中文</m3e-menu-item-radio>
+  <m3e-menu-item-radio data-value="en">English</m3e-menu-item-radio>
+</m3e-menu>
+
+<m3e-menu id="theme-menu" position-x="before" position-y="below">
+  <m3e-menu-item-radio data-value="light" data-i18n="theme_light">浅色</m3e-menu-item-radio>
+  <m3e-menu-item-radio data-value="dark" data-i18n="theme_dark">深色</m3e-menu-item-radio>
+  <m3e-menu-item-radio data-value="auto" data-i18n="theme_auto">自动</m3e-menu-item-radio>
+</m3e-menu>
+
+<m3e-menu id="contrast-menu" position-x="before" position-y="below">
+  <m3e-menu-item-radio data-value="standard" data-i18n="contrast_standard">标准</m3e-menu-item-radio>
+  <m3e-menu-item-radio data-value="medium" data-i18n="contrast_medium">中等</m3e-menu-item-radio>
+  <m3e-menu-item-radio data-value="high" data-i18n="contrast_high">高</m3e-menu-item-radio>
+</m3e-menu>
+
+<m3e-menu id="accent-menu" position-x="before" position-y="below">
+  <m3e-menu-item-radio data-value="material" data-i18n="accent_default">默认（Material）</m3e-menu-item-radio>
+  <m3e-menu-item id="accent-extract-item" data-value="extract">
+    <m3e-icon slot="icon" name="image" variant="outlined"></m3e-icon>
+    <span data-i18n="theme_extract">从图片提取</span>
+  </m3e-menu-item>
+</m3e-menu>
 
 <!-- Material 3 Expressive (@m3e/web) -->
 <!-- m3e builds on Lit + tslib + its own core; the dist files use bare specifiers,
@@ -161,14 +203,17 @@
     "@m3e/web/core": "https://cdn.jsdelivr.net/npm/@m3e/web@2.7.9/dist/core.min.js",
     "@m3e/web/core/a11y": "https://cdn.jsdelivr.net/npm/@m3e/web@2.7.9/dist/core-a11y.min.js",
     "@m3e/web/core/bidi": "https://cdn.jsdelivr.net/npm/@m3e/web@2.7.9/dist/core-bidi.min.js",
+    "@m3e/web/core/anchoring": "https://cdn.jsdelivr.net/npm/@m3e/web@2.7.9/dist/core-anchoring.min.js",
     "@m3e/web/button": "https://cdn.jsdelivr.net/npm/@m3e/web@2.7.9/dist/button.min.js",
     "@m3e/web/icon": "https://cdn.jsdelivr.net/npm/@m3e/web@2.7.9/dist/icon.min.js",
     "@m3e/web/icon-button": "https://cdn.jsdelivr.net/npm/@m3e/web@2.7.9/dist/icon-button.min.js",
     "@m3e/web/switch": "https://cdn.jsdelivr.net/npm/@m3e/web@2.7.9/dist/switch.min.js",
     "@m3e/web/snackbar": "https://cdn.jsdelivr.net/npm/@m3e/web@2.7.9/dist/snackbar.min.js",
     "@m3e/web/bottom-sheet": "https://cdn.jsdelivr.net/npm/@m3e/web@2.7.9/dist/bottom-sheet.min.js",
-    "@m3e/web/button-group": "https://cdn.jsdelivr.net/npm/@m3e/web@2.7.9/dist/button-group.min.js",
-    "@m3e/web/theme": "https://cdn.jsdelivr.net/npm/@m3e/web@2.7.9/dist/theme.min.js"
+    "@m3e/web/list": "https://cdn.jsdelivr.net/npm/@m3e/web@2.7.9/dist/list.min.js",
+    "@m3e/web/menu": "https://cdn.jsdelivr.net/npm/@m3e/web@2.7.9/dist/menu.min.js",
+    "@m3e/web/theme": "https://cdn.jsdelivr.net/npm/@m3e/web@2.7.9/dist/theme.min.js",
+    "@material/material-color-utilities": "https://cdn.jsdelivr.net/npm/@material/material-color-utilities@0.3.0/+esm"
   }
 }
 </script>

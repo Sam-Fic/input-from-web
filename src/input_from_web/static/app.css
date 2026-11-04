@@ -375,86 +375,56 @@
     opacity: 0.38;
     pointer-events: none;
   }
-  .autostart-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
+  /* Segmented settings list: everything visual (surface container, 16px
+     container shape, 4px item shape, 2px gap, hover/focus shapes and state
+     layers) comes from <m3e-list variant="segmented">. The only rule kept is
+     layout: the list must not be squeezed when the sheet body scrolls. */
+  .settings-list {
     flex-shrink: 0;
-    gap: 8px;
-    padding: 4px 0;
   }
   .autostart-label {
     font-size: 14px;
-    color: var(--md-sys-color-on-surface, #444);
+    color: var(--md-sys-color-on-surface);
     flex: 1 1 auto;
     min-width: 0;
+    /* The title lives in m3e-list-item's default slot (an internal column flex
+       box): allow it to wrap and to break long unbreakable tokens, so a long
+       Chinese/English title can never push the trailing control past the
+       list item's 16px padding-inline-end. */
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
-  /* Language selector: label on top, full-width connected button group below. */
-  .lang-group-row {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    flex-shrink: 0;
-    padding: 4px 0;
+  /* Value rows (language / theme / contrast / accent): the trailing m3e-button
+     shows the current value and opens the anchored m3e-menu. Text variant keeps
+     the row flat; size, colors, state layer and focus ring are component defaults.
+     Trailing content (buttons and switches alike) keeps its intrinsic size and
+     stays pinned to the row's trailing edge: m3e-list-item's .base already
+     supplies the 16px padding-inline-end and its .content flex-grow, so no
+     margin offset is added here. */
+  .settings-list m3e-list-item > [slot="trailing"] {
+    flex: none;
   }
-  .lang-group-row m3e-button-group {
-    width: 100%;
+  .settings-option-value {
+    white-space: nowrap;
   }
-  /* Force the language/theme/contrast buttons to equal width (ignore content length). */
-  .lang-group-row m3e-button-group m3e-button,
-  .theme-group-row m3e-button-group m3e-button,
-  .contrast-group-row m3e-button-group m3e-button {
-    flex: 1 1 0;
-    min-width: 0;
-    justify-content: center;
-  }
-  /* Theme/contrast selectors: same layout as the language selector. */
-  .theme-group-row,
-  .contrast-group-row {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    flex-shrink: 0;
-    padding: 4px 0;
-  }
-  .theme-group-row m3e-button-group,
-  .contrast-group-row m3e-button-group {
-    width: 100%;
-  }
-  /* Theme color: label, a grid of preset swatches, and a "Material" reset button. */
-  .color-row {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    flex-shrink: 0;
-    padding: 4px 0;
-  }
-  .swatch-grid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
-  }
-  .swatch {
-    width: 34px;
-    height: 34px;
-    border-radius: 50%;
-    border: none;
+  /* Screen-reader-only label: gives each value button a name that includes the
+     row title (its visible value text alone would not say what is being changed). */
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
     padding: 0;
-    cursor: pointer;
-    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.15);
-    transition: transform 0.12s ease;
+    border: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
-  .swatch:hover { transform: scale(1.08); }
-  .swatch.selected {
-    outline: 3px solid var(--md-sys-color-primary, #6750A4);
-    outline-offset: 3px;
-  }
-  #theme-material-btn { align-self: flex-start; }
   /* Bottom sheet content */
   .sheet-header {
     font-size: 16px;
     font-weight: 500;
-    color: var(--md-sys-color-on-surface, #1d1b20);
+    color: var(--md-sys-color-on-surface);
     padding: 4px 16px 0;
   }
   .sheet-body {
@@ -462,4 +432,16 @@
     flex-direction: column;
     gap: 4px;
     padding: 8px 16px 20px;
+    /* Height cap: the sheet's "fit" detent is measured from this box, so
+       capping the body caps the whole sheet instead of overflowing the
+       viewport. 90dvh keeps it inside mobile browser chrome changes; the
+       fallback covers browsers without dynamic viewport units. The header
+       stays outside this scroller, so it remains visible at all times. */
+    box-sizing: border-box;
+    max-height: calc(90vh - 64px);
+    max-height: calc(90dvh - 64px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
   }

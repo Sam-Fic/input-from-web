@@ -6,14 +6,15 @@ try {
     await import('@m3e/web/switch');
     await import('@m3e/web/snackbar');
     await import('@m3e/web/bottom-sheet');
-    await import('@m3e/web/button-group');
+    await import('@m3e/web/list');
+    await import('@m3e/web/menu');
     await import('@m3e/web/theme');
   } catch (err) {
     // Surface CDN/boot failures visibly instead of leaving an unstyled, dead page.
     window.__M3E_BOOT_ERROR__ = String((err && err.message) || err);
     const banner = document.createElement('div');
     banner.textContent = 'Failed to load UI components: ' + window.__M3E_BOOT_ERROR__;
-    banner.style.cssText = 'position:fixed;left:16px;right:16px;bottom:16px;background:var(--md-sys-color-error,#b3261e);color:var(--md-sys-color-on-error,#fff);'
+    banner.style.cssText = 'position:fixed;left:16px;right:16px;bottom:16px;background:var(--md-sys-color-error);color:var(--md-sys-color-on-error);'
       + 'padding:12px 16px;border-radius:12px;z-index:9999;font-size:14px;line-height:1.4';
     document.body.appendChild(banner);
     throw err;
@@ -28,7 +29,12 @@ try {
     customElements.whenDefined('m3e-icon'),
     customElements.whenDefined('m3e-snackbar'),
     customElements.whenDefined('m3e-bottom-sheet'),
-    customElements.whenDefined('m3e-button-group'),
+    customElements.whenDefined('m3e-list'),
+    customElements.whenDefined('m3e-list-item'),
+    customElements.whenDefined('m3e-menu'),
+    customElements.whenDefined('m3e-menu-trigger'),
+    customElements.whenDefined('m3e-menu-item'),
+    customElements.whenDefined('m3e-menu-item-radio'),
     customElements.whenDefined('m3e-theme'),
   ]);
 
@@ -192,6 +198,7 @@ const I18N = {
     contrast_medium: "Medium",
     contrast_high: "High",
     theme_color_label: "Accent color",
+    accent_default: "Default (Material)",
     theme_extract: "Extract from image",
     char_count_label: "chars",
   },
@@ -243,6 +250,7 @@ const I18N = {
     contrast_medium: "中等",
     contrast_high: "高",
     theme_color_label: "主题色",
+    accent_default: "默认（Material）",
     theme_extract: "从图片提取",
     char_count_label: "字",
   },
@@ -625,7 +633,7 @@ function syncMethodDependent() {
   const isClipboard = methodSwitch.checked;
   for (const sw of methodDependent) {
     sw.disabled = !isClipboard;
-    sw.closest(".autostart-row").style.opacity = isClipboard ? "1" : "0.4";
+    sw.closest("m3e-list-item").style.opacity = isClipboard ? "1" : "0.4";
   }
 }
 
@@ -714,41 +722,82 @@ settingsBtn.addEventListener("click", () => toggleSettings(true));
 settingsSheet.addEventListener("opened", () => settingsBtn.setAttribute("aria-expanded", "true"));
 settingsSheet.addEventListener("closed", () => settingsBtn.setAttribute("aria-expanded", "false"));
 
-/* --- Language selector (connected button group inside the settings sheet) --- */
-const langGroup = document.getElementById("lang-group");
-// Mark the button matching the resolved UI language as selected (single-select,
-// so every other button is explicitly unselected too).
-function syncLangGroup() {
-  for (const btn of langGroup.querySelectorAll("m3e-button")) {
-    btn.selected = (btn.dataset.lang === LANG);
+/* --- Settings value rows (language / theme / contrast / accent) ----------
+   Each row is a single m3e-list-item: the title sits on the start side and the
+   trailing m3e-button shows the current value. That button hosts an
+   m3e-menu-trigger, so activating it (mouse, Enter or Space) opens the
+   anchored m3e-menu; radio items carry the options. Picking one applies
+   immediately through the same storage/application logic as before. */
+
+function markMenuChecked(menu, value) {
+  for (const item of menu.querySelectorAll("m3e-menu-item-radio")) {
+    item.checked = item.dataset.value === value;
   }
 }
-// m3e-button-group listens to its children's `change` and keeps a single
-// selection in non-multi mode; we just read back which one is now selected.
-langGroup.addEventListener("change", () => {
-  for (const btn of langGroup.querySelectorAll("m3e-button")) {
-    if (btn.selected) {
-      LANG = btn.dataset.lang;
-      break;
-    }
+
+// Row value text: either an i18n key (so it follows the UI language) or a raw
+// string (e.g. a hex accent) that must not be translated.
+function setRowValue(el, key) {
+  if (!el) return;
+  el.dataset.i18n = key;
+  el.textContent = t(key);
+}
+
+function setRowText(el, text) {
+  if (!el) return;
+  el.removeAttribute("data-i18n");
+  el.textContent = text;
+}
+
+// A pick applies immediately; the trigger button also mirrors the menu's open
+// state for assistive tech (Enter/Space open it, Esc closes it inside the menu).
+function wireRowMenu(menu, button, onPick) {
+  if (!menu) return;
+  if (button) {
+    // m3e-menu-trigger sets these on its parent too; setting them here keeps the
+    // contract explicit even if the trigger's aria reflection is unavailable.
+    button.setAttribute("aria-haspopup", "menu");
+    button.setAttribute("aria-expanded", "false");
+    if (menu.id) button.setAttribute("aria-controls", menu.id);
   }
+  menu.addEventListener("click", (e) => {
+    const item = e.target.closest("[data-value]");
+    if (item && menu.contains(item)) onPick(item.dataset.value);
+  });
+  menu.addEventListener("toggle", (e) => {
+    if (button) button.setAttribute("aria-expanded", String(e.newState === "open"));
+  });
+}
+
+/* Language (中文 / English). Native language names stay untranslated. */
+const langMenu = document.getElementById("lang-menu");
+const langValue = document.getElementById("lang-value");
+const langBtn = document.getElementById("lang-btn");
+
+function syncLangRow() {
+  markMenuChecked(langMenu, LANG);
+  setRowText(langValue, LANG === "zh" ? "中文" : "English");
+}
+
+wireRowMenu(langMenu, langBtn, (value) => {
+  LANG = value;
   localStorage.setItem(LANG_STORAGE_KEY, LANG);
   applyStaticI18n();
   updateButtonState();
+  syncLangRow();
 });
-syncLangGroup();
+syncLangRow();
 
-/* --- Theme selector (light / dark / auto, follows the OS) ---
+/* Theme (light / dark / auto, follows the OS) ---
    Purely a UI preference, persisted in localStorage (no server round-trip). */
 const THEME_STORAGE_KEY = "input-from-web-theme";
-const themeGroup = document.getElementById("theme-group");
-const themeMeta = document.querySelector('meta[name="theme-color"]');
+const THEME_COLOR_KEY = "input-from-web-theme-color";
+const themeMenu = document.getElementById("theme-menu");
+const themeValue = document.getElementById("theme-value");
+const themeBtn = document.getElementById("theme-btn");
 
-function resolvedThemeIsDark(theme) {
-  if (theme === "dark") return true;
-  if (theme === "light") return false;
-  return window.matchMedia("(prefers-color-scheme: dark)").matches;
-}
+let THEME = localStorage.getItem(THEME_STORAGE_KEY) || "auto";
+let themeColor = localStorage.getItem(THEME_COLOR_KEY) || "material";
 
 // Apply a theme: toggle the data-theme attribute, the native color-scheme, and
 // the mobile browser-chrome theme-color meta so everything matches.
@@ -763,28 +812,19 @@ function applyTheme(theme) {
   }
   // Let <m3e-theme> generate the matching light/dark token set.
   if (appTheme) appTheme.scheme = theme;
-  if (themeMeta) {
-    const lightMeta = (themeColor && themeColor !== "material") ? themeColor : "#6750A4";
-    themeMeta.setAttribute("content", resolvedThemeIsDark(theme) ? "#1a1a1a" : lightMeta);
-  }
   scheduleTokenSync();
 }
 
-function syncThemeGroup() {
-  for (const btn of themeGroup.querySelectorAll("m3e-button")) {
-    btn.selected = (btn.dataset.theme === THEME);
-  }
+function syncThemeRow() {
+  markMenuChecked(themeMenu, THEME);
+  setRowValue(themeValue, "theme_" + THEME);
 }
 
-themeGroup.addEventListener("change", () => {
-  for (const btn of themeGroup.querySelectorAll("m3e-button")) {
-    if (btn.selected) {
-      THEME = btn.dataset.theme;
-      break;
-    }
-  }
+wireRowMenu(themeMenu, themeBtn, (value) => {
+  THEME = value;
   localStorage.setItem(THEME_STORAGE_KEY, THEME);
   applyTheme(THEME);
+  syncThemeRow();
 });
 
 // Re-evaluate "auto" when the OS theme changes (only matters while in auto mode).
@@ -792,48 +832,42 @@ window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () 
   if (THEME === "auto") applyTheme("auto");
 });
 
-let THEME = localStorage.getItem(THEME_STORAGE_KEY) || "auto";
-const THEME_COLOR_KEY = "input-from-web-theme-color";
-let themeColor = localStorage.getItem(THEME_COLOR_KEY) || "material";
 applyTheme(THEME);
-syncThemeGroup();
+syncThemeRow();
 
-/* --- Contrast selector (standard / medium / high) ---
+/* --- Contrast (standard / medium / high) ---
    Drives <m3e-theme>'s contrast level, which re-tones the generated palette.
    Purely a UI preference, persisted in localStorage. */
 const CONTRAST_STORAGE_KEY = "input-from-web-contrast";
-const contrastGroup = document.getElementById("contrast-group");
+const contrastMenu = document.getElementById("contrast-menu");
+const contrastValue = document.getElementById("contrast-value");
+const contrastBtn = document.getElementById("contrast-btn");
 
 function applyContrast(contrast) {
   if (appTheme) appTheme.contrast = contrast;
 }
 
-function syncContrastGroup() {
-  for (const btn of contrastGroup.querySelectorAll("m3e-button")) {
-    btn.selected = (btn.dataset.contrast === CONTRAST);
-  }
+function syncContrastRow() {
+  markMenuChecked(contrastMenu, CONTRAST);
+  setRowValue(contrastValue, "contrast_" + CONTRAST);
 }
 
-contrastGroup.addEventListener("change", () => {
-  for (const btn of contrastGroup.querySelectorAll("m3e-button")) {
-    if (btn.selected) {
-      CONTRAST = btn.dataset.contrast;
-      break;
-    }
-  }
+wireRowMenu(contrastMenu, contrastBtn, (value) => {
+  CONTRAST = value;
   localStorage.setItem(CONTRAST_STORAGE_KEY, CONTRAST);
   applyContrast(CONTRAST);
+  scheduleTokenSync();
+  syncContrastRow();
 });
 
 let CONTRAST = localStorage.getItem(CONTRAST_STORAGE_KEY) || "standard";
 applyContrast(CONTRAST);
-syncContrastGroup();
+syncContrastRow();
 
 /* --- Accent color (theme color) ---
-   The seed color is taken from a user-picked image via getColorFromImage (see the
-   "Extract from image" button). The full palette is derived from that seed by
-   <m3e-theme> (see applyThemeColor); "material" (no custom seed) falls back to the
-   Material baseline purple. */
+   The seed comes either from the Material baseline ("material") or from a
+   user-picked image via getColorFromImage. The full palette is derived from that
+   seed by <m3e-theme> (see applyThemeColor). */
 
 // Apply a custom accent (hex) or fall back to the Material baseline ("material").
 // The full primary/secondary/tertiary/neutral/surface palette is generated by
@@ -847,19 +881,34 @@ function applyThemeColor(color) {
   }
 }
 
-function syncThemeColorUI() {
-  // The accent is chosen solely via "Extract from image" (or the baseline default),
-  // so there are no preset swatches / material toggle to reflect here.
+const accentMenu = document.getElementById("accent-menu");
+const accentValue = document.getElementById("accent-value");
+const accentBtn = document.getElementById("accent-btn");
+const wallpaperInput = document.getElementById("wallpaper-input");
+
+function syncAccentRow() {
+  const isMaterial = !themeColor || themeColor === "material";
+  markMenuChecked(accentMenu, isMaterial ? "material" : null);
+  if (isMaterial) setRowValue(accentValue, "accent_default");
+  else setRowText(accentValue, themeColor.toUpperCase());
 }
 
-
+wireRowMenu(accentMenu, accentBtn, (value) => {
+  if (value === "extract") {
+    // Special item: not a value, it opens the image picker.
+    wallpaperInput.click();
+    return;
+  }
+  themeColor = value;
+  localStorage.setItem(THEME_COLOR_KEY, themeColor);
+  applyThemeColor(themeColor);
+  applyTheme(THEME);
+  syncAccentRow();
+});
 
 // Extract a seed color from a user-picked wallpaper/image, then feed it to
 // <m3e-theme>. This is the closest a web app can get to Android's wallpaper-based
 // dynamic color (browsers can't read the OS wallpaper/accent directly).
-const themeExtractBtn = document.getElementById("theme-extract-btn");
-const wallpaperInput = document.getElementById("wallpaper-input");
-themeExtractBtn.addEventListener("click", () => wallpaperInput.click());
 wallpaperInput.addEventListener("change", async () => {
   const file = wallpaperInput.files && wallpaperInput.files[0];
   if (!file) return;
@@ -872,7 +921,7 @@ wallpaperInput.addEventListener("change", async () => {
     themeColor = hex;
     localStorage.setItem(THEME_COLOR_KEY, themeColor);
     applyThemeColor(themeColor);
-    syncThemeColorUI();
+    syncAccentRow();
     applyTheme(THEME);
   } catch (e) {
     console.error("从图片提取配色失败", e);
@@ -883,7 +932,15 @@ wallpaperInput.addEventListener("change", async () => {
 });
 
 applyThemeColor(themeColor);
-syncThemeColorUI();
+syncAccentRow();
+
+// Menus are manual popovers, so dismiss any that is still open when the sheet
+// closes (otherwise it would float over the page on its own).
+settingsSheet.addEventListener("closed", () => {
+  for (const menu of [langMenu, themeMenu, contrastMenu, accentMenu]) {
+    if (menu && typeof menu.hide === "function") menu.hide();
+  }
+});
 
 applyStaticI18n();
 updateButtonState();
