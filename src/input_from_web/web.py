@@ -115,13 +115,25 @@ def create_app(runtime: Runtime) -> Flask:
         rt = app.config["RUNTIME"]
         check_token(rt)
         if request.method == "GET":
-            return {"installed": autostart_installed()}
+            try:
+                return {"installed": autostart_installed()}
+            except Exception as e:
+                print(f"Autostart status check failed: {e}", file=sys.stderr)
+                return {"installed": False}
         action = (request.get_json(force=True, silent=True) or {}).get("action")
         if action == "install":
-            ok, msg = install_autostart()
+            try:
+                ok, msg = install_autostart()
+            except Exception as e:
+                print(f"Autostart install failed: {e}", file=sys.stderr)
+                return {"ok": False, "message": f"Autostart install failed: {e}"}
             return {"ok": ok, "message": msg}
         if action == "uninstall":
-            ok, msg = uninstall_autostart()
+            try:
+                ok, msg = uninstall_autostart()
+            except Exception as e:
+                print(f"Autostart uninstall failed: {e}", file=sys.stderr)
+                return {"ok": False, "message": f"Autostart uninstall failed: {e}"}
             return {"ok": ok, "message": msg}
         return {"error": "unknown action"}, 400
 
