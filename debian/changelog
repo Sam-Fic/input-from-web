@@ -1,3 +1,13 @@
+input-from-web (1.2.0-1) noble; urgency=low
+
+  * Theme: extract the accent color from an uploaded image.
+  * Theme: keep background and light/dark appearance in sync with the accent color.
+  * Theme: make the offline button follow the theme color and remove the purple flash on load.
+  * Theme: add a contrast toggle and floating labels for the input fields.
+  * Packaging: build the Linux .deb and the Windows executable in GitHub Actions and publish them together with the macOS DMG.
+
+ -- Sam-Fic <169824983+Sam-Fic@users.noreply.github.com>  Wed, 04 Nov 2026 12:00:00 +0800
+
 input-from-web (0.1.0-1) noble; urgency=low
 
   * Initial release.

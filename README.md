@@ -64,7 +64,7 @@ venv/bin/pip install flask qrcode
 ### From .deb package (Linux)
 
 ```bash
-sudo apt install ./input-from-web_0.1.0_all.deb
+sudo apt install ./input-from-web_1.2.0_all.deb
 input-from-web
 ```
 
