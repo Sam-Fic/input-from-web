@@ -394,30 +394,23 @@
     white-space: normal;
     overflow-wrap: anywhere;
   }
-  /* Value rows (language / theme / contrast / accent): the trailing m3e-button
-     shows the current value and opens the anchored m3e-menu. Text variant keeps
-     the row flat; size, colors, state layer and focus ring are component defaults.
-     Trailing content (buttons and switches alike) keeps its intrinsic size and
-     stays pinned to the row's trailing edge: m3e-list-item's .base already
-     supplies the 16px padding-inline-end and its .content flex-grow, so no
-     margin offset is added here. */
+  /* Value rows (language / theme / contrast / accent) put their title inside an
+     m3e-menu-trigger, which listens on its parent element - the m3e-list-item -
+     so the whole row toggles the menu. Everything visual (hover/focus shapes,
+     state layers, the 4px segmented item shape) still comes from the component;
+     the only rules here are the pointer affordance for those four rows and
+     keeping trailing content at its intrinsic size, pinned to the row's
+     trailing edge (the internal .base already supplies the 16px
+     padding-inline-end and .content's flex-grow, so no margin offset is added).
+     Toggle rows deliberately do not get .settings-option-row: clicking anywhere
+     else on them must not flip a switch. */
+  .settings-option-row {
+    cursor: pointer;
+  }
   .settings-list m3e-list-item > [slot="trailing"] {
     flex: none;
   }
   .settings-option-value {
-    white-space: nowrap;
-  }
-  /* Screen-reader-only label: gives each value button a name that includes the
-     row title (its visible value text alone would not say what is being changed). */
-  .sr-only {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    margin: -1px;
-    padding: 0;
-    border: 0;
-    overflow: hidden;
-    clip-path: inset(50%);
     white-space: nowrap;
   }
   /* Bottom sheet content */

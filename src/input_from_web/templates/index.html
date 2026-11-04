@@ -109,80 +109,83 @@
         <m3e-switch slot="trailing" icons="both" id="token-switch"></m3e-switch>
       </m3e-list-item>
 
-      <!-- Value rows: title on the start side, current value on the trailing
-           side. The trailing m3e-button hosts an m3e-menu-trigger, so the menu
-           is anchored to (and labelled by) the button. -->
-      <m3e-list-item>
-        <span class="autostart-label" data-i18n="lang_switch_label">界面语言</span>
-        <m3e-button slot="trailing" variant="text" size="small" class="settings-option" id="lang-btn">
-          <m3e-menu-trigger for="lang-menu">
-            <span class="sr-only" data-i18n="lang_switch_label">界面语言</span>
-            <span class="settings-option-value" id="lang-value">中文</span>
-          </m3e-menu-trigger>
+      <!-- Value rows: the whole row opens the menu. The m3e-menu-trigger wraps
+           the row title and listens on its parent (the m3e-list-item), so a
+           click on any part of the row toggles the menu exactly once. The
+           trailing m3e-button stays the keyboard control: it is focusable, gets
+           the visible focus ring and Enter/Space activate it natively. Its
+           accessible name combines the row title and the current value. -->
+      <m3e-list-item id="lang-row" class="settings-option-row">
+        <m3e-menu-trigger for="lang-menu">
+          <span class="autostart-label" id="lang-label" data-i18n="lang_switch_label">界面语言</span>
+        </m3e-menu-trigger>
+        <m3e-button slot="trailing" variant="text" size="small" class="settings-option" id="lang-btn" aria-labelledby="lang-label lang-value">
+          <span class="settings-option-value" id="lang-value">中文</span>
         </m3e-button>
       </m3e-list-item>
 
-      <m3e-list-item>
-        <span class="autostart-label" data-i18n="theme_switch_label">主题</span>
-        <m3e-button slot="trailing" variant="text" size="small" class="settings-option" id="theme-btn">
-          <m3e-menu-trigger for="theme-menu">
-            <span class="sr-only" data-i18n="theme_switch_label">主题</span>
-            <span class="settings-option-value" id="theme-value" data-i18n="theme_auto">自动</span>
-          </m3e-menu-trigger>
+      <m3e-list-item id="theme-row" class="settings-option-row">
+        <m3e-menu-trigger for="theme-menu">
+          <span class="autostart-label" id="theme-label" data-i18n="theme_switch_label">主题</span>
+        </m3e-menu-trigger>
+        <m3e-button slot="trailing" variant="text" size="small" class="settings-option" id="theme-btn" aria-labelledby="theme-label theme-value">
+          <span class="settings-option-value" id="theme-value" data-i18n="theme_auto">自动</span>
         </m3e-button>
       </m3e-list-item>
 
-      <m3e-list-item>
-        <span class="autostart-label" data-i18n="contrast_switch_label">对比度</span>
-        <m3e-button slot="trailing" variant="text" size="small" class="settings-option" id="contrast-btn">
-          <m3e-menu-trigger for="contrast-menu">
-            <span class="sr-only" data-i18n="contrast_switch_label">对比度</span>
-            <span class="settings-option-value" id="contrast-value" data-i18n="contrast_standard">标准</span>
-          </m3e-menu-trigger>
+      <m3e-list-item id="contrast-row" class="settings-option-row">
+        <m3e-menu-trigger for="contrast-menu">
+          <span class="autostart-label" id="contrast-label" data-i18n="contrast_switch_label">对比度</span>
+        </m3e-menu-trigger>
+        <m3e-button slot="trailing" variant="text" size="small" class="settings-option" id="contrast-btn" aria-labelledby="contrast-label contrast-value">
+          <span class="settings-option-value" id="contrast-value" data-i18n="contrast_standard">标准</span>
         </m3e-button>
       </m3e-list-item>
 
-      <m3e-list-item>
-        <span class="autostart-label" data-i18n="theme_color_label">主题色</span>
-        <m3e-button slot="trailing" variant="text" size="small" class="settings-option" id="accent-btn">
-          <m3e-menu-trigger for="accent-menu">
-            <span class="sr-only" data-i18n="theme_color_label">主题色</span>
-            <span class="settings-option-value" id="accent-value" data-i18n="accent_default">默认（Material）</span>
-          </m3e-menu-trigger>
+      <m3e-list-item id="accent-row" class="settings-option-row">
+        <m3e-menu-trigger for="accent-menu">
+          <span class="autostart-label" id="accent-label" data-i18n="theme_color_label">主题色</span>
+        </m3e-menu-trigger>
+        <m3e-button slot="trailing" variant="text" size="small" class="settings-option" id="accent-btn" aria-labelledby="accent-label accent-value">
+          <span class="settings-option-value" id="accent-value" data-i18n="accent_default">默认（Material）</span>
         </m3e-button>
       </m3e-list-item>
     </m3e-list>
 
     <input type="file" id="wallpaper-input" accept="image/*" hidden>
   </div>
+
+  <!-- Option menus for the value rows above. They must live *inside* the sheet:
+       a modal m3e-bottom-sheet marks its siblings inert, and an inert menu is
+       painted (popover top layer) but cannot be clicked or focused. The popover
+       itself still escapes the sheet's clipping/scroll, and being in the sheet
+       subtree means picking an option is an inside click, so the sheet no
+       longer treats it as "clicked outside" and dismisses itself. -->
+  <m3e-menu id="lang-menu" position-x="before" position-y="below">
+    <m3e-menu-item-radio data-value="zh" checked>中文</m3e-menu-item-radio>
+    <m3e-menu-item-radio data-value="en">English</m3e-menu-item-radio>
+  </m3e-menu>
+
+  <m3e-menu id="theme-menu" position-x="before" position-y="below">
+    <m3e-menu-item-radio data-value="light" data-i18n="theme_light">浅色</m3e-menu-item-radio>
+    <m3e-menu-item-radio data-value="dark" data-i18n="theme_dark">深色</m3e-menu-item-radio>
+    <m3e-menu-item-radio data-value="auto" data-i18n="theme_auto">自动</m3e-menu-item-radio>
+  </m3e-menu>
+
+  <m3e-menu id="contrast-menu" position-x="before" position-y="below">
+    <m3e-menu-item-radio data-value="standard" data-i18n="contrast_standard">标准</m3e-menu-item-radio>
+    <m3e-menu-item-radio data-value="medium" data-i18n="contrast_medium">中等</m3e-menu-item-radio>
+    <m3e-menu-item-radio data-value="high" data-i18n="contrast_high">高</m3e-menu-item-radio>
+  </m3e-menu>
+
+  <m3e-menu id="accent-menu" position-x="before" position-y="below">
+    <m3e-menu-item-radio data-value="material" data-i18n="accent_default">默认（Material）</m3e-menu-item-radio>
+    <m3e-menu-item id="accent-extract-item" data-value="extract">
+      <m3e-icon slot="icon" name="image" variant="outlined"></m3e-icon>
+      <span data-i18n="theme_extract">从图片提取</span>
+    </m3e-menu-item>
+  </m3e-menu>
 </m3e-bottom-sheet>
-
-<!-- Option menus for the value rows above. They live outside the sheet so the
-     sheet's scroll/containment can never clip the popover. -->
-<m3e-menu id="lang-menu" position-x="before" position-y="below">
-  <m3e-menu-item-radio data-value="zh" checked>中文</m3e-menu-item-radio>
-  <m3e-menu-item-radio data-value="en">English</m3e-menu-item-radio>
-</m3e-menu>
-
-<m3e-menu id="theme-menu" position-x="before" position-y="below">
-  <m3e-menu-item-radio data-value="light" data-i18n="theme_light">浅色</m3e-menu-item-radio>
-  <m3e-menu-item-radio data-value="dark" data-i18n="theme_dark">深色</m3e-menu-item-radio>
-  <m3e-menu-item-radio data-value="auto" data-i18n="theme_auto">自动</m3e-menu-item-radio>
-</m3e-menu>
-
-<m3e-menu id="contrast-menu" position-x="before" position-y="below">
-  <m3e-menu-item-radio data-value="standard" data-i18n="contrast_standard">标准</m3e-menu-item-radio>
-  <m3e-menu-item-radio data-value="medium" data-i18n="contrast_medium">中等</m3e-menu-item-radio>
-  <m3e-menu-item-radio data-value="high" data-i18n="contrast_high">高</m3e-menu-item-radio>
-</m3e-menu>
-
-<m3e-menu id="accent-menu" position-x="before" position-y="below">
-  <m3e-menu-item-radio data-value="material" data-i18n="accent_default">默认（Material）</m3e-menu-item-radio>
-  <m3e-menu-item id="accent-extract-item" data-value="extract">
-    <m3e-icon slot="icon" name="image" variant="outlined"></m3e-icon>
-    <span data-i18n="theme_extract">从图片提取</span>
-  </m3e-menu-item>
-</m3e-menu>
 
 <!-- Material 3 Expressive (@m3e/web) -->
 <!-- m3e builds on Lit + tslib + its own core; the dist files use bare specifiers,

@@ -723,11 +723,13 @@ settingsSheet.addEventListener("opened", () => settingsBtn.setAttribute("aria-ex
 settingsSheet.addEventListener("closed", () => settingsBtn.setAttribute("aria-expanded", "false"));
 
 /* --- Settings value rows (language / theme / contrast / accent) ----------
-   Each row is a single m3e-list-item: the title sits on the start side and the
-   trailing m3e-button shows the current value. That button hosts an
-   m3e-menu-trigger, so activating it (mouse, Enter or Space) opens the
-   anchored m3e-menu; radio items carry the options. Picking one applies
-   immediately through the same storage/application logic as before. */
+   Every row is one m3e-list-item whose title is wrapped in an
+   m3e-menu-trigger. The trigger attaches its click listener to its parent
+   element, so a click anywhere on the row - title, trailing value, padding -
+   toggles the anchored m3e-menu exactly once (there is no second row-level
+   click handler and therefore no double toggle). The trailing m3e-button is
+   kept as the focusable control: it carries the focus ring and its native
+   Enter/Space click bubbles into the same row listener. */
 
 function markMenuChecked(menu, value) {
   for (const item of menu.querySelectorAll("m3e-menu-item-radio")) {
@@ -749,17 +751,39 @@ function setRowText(el, text) {
   el.textContent = text;
 }
 
-// A pick applies immediately; the trigger button also mirrors the menu's open
-// state for assistive tech (Enter/Space open it, Esc closes it inside the menu).
-function wireRowMenu(menu, button, onPick) {
+function wireRowMenu(menu, row, button, onPick) {
   if (!menu) return;
   if (button) {
-    // m3e-menu-trigger sets these on its parent too; setting them here keeps the
-    // contract explicit even if the trigger's aria reflection is unavailable.
     button.setAttribute("aria-haspopup", "menu");
     button.setAttribute("aria-expanded", "false");
     if (menu.id) button.setAttribute("aria-controls", menu.id);
   }
+  if (row) {
+    row.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && menu.isOpen) {
+        // Covers the moment right after opening, while focus is still on the
+        // row's button (it moves into the menu itself a frame later). Close only
+        // the menu and stop the event, otherwise the sheet's document-level
+        // Escape handler closes the whole panel on the same key press.
+        e.preventDefault();
+        e.stopPropagation();
+        menu.hide();
+      }
+    });
+  }
+  // Once the menu is open it owns the keyboard focus, so Escape arrives on a
+  // menu item, bypassing the row listener above. Handle it in the capture phase
+  // on the menu so neither the menu's own key handling nor the sheet's
+  // document-level handler reacts: Escape closes the menu only, then focus
+  // returns to the row's button.
+  menu.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape" || !menu.isOpen) return;
+    if (e.shiftKey || e.ctrlKey || e.altKey || e.metaKey) return;
+    e.preventDefault();
+    e.stopPropagation();
+    menu.hide();
+    if (button) button.focus();
+  }, true);
   menu.addEventListener("click", (e) => {
     const item = e.target.closest("[data-value]");
     if (item && menu.contains(item)) onPick(item.dataset.value);
@@ -772,6 +796,7 @@ function wireRowMenu(menu, button, onPick) {
 /* Language (中文 / English). Native language names stay untranslated. */
 const langMenu = document.getElementById("lang-menu");
 const langValue = document.getElementById("lang-value");
+const langRow = document.getElementById("lang-row");
 const langBtn = document.getElementById("lang-btn");
 
 function syncLangRow() {
@@ -779,7 +804,7 @@ function syncLangRow() {
   setRowText(langValue, LANG === "zh" ? "中文" : "English");
 }
 
-wireRowMenu(langMenu, langBtn, (value) => {
+wireRowMenu(langMenu, langRow, langBtn, (value) => {
   LANG = value;
   localStorage.setItem(LANG_STORAGE_KEY, LANG);
   applyStaticI18n();
@@ -794,6 +819,7 @@ const THEME_STORAGE_KEY = "input-from-web-theme";
 const THEME_COLOR_KEY = "input-from-web-theme-color";
 const themeMenu = document.getElementById("theme-menu");
 const themeValue = document.getElementById("theme-value");
+const themeRow = document.getElementById("theme-row");
 const themeBtn = document.getElementById("theme-btn");
 
 let THEME = localStorage.getItem(THEME_STORAGE_KEY) || "auto";
@@ -820,7 +846,7 @@ function syncThemeRow() {
   setRowValue(themeValue, "theme_" + THEME);
 }
 
-wireRowMenu(themeMenu, themeBtn, (value) => {
+wireRowMenu(themeMenu, themeRow, themeBtn, (value) => {
   THEME = value;
   localStorage.setItem(THEME_STORAGE_KEY, THEME);
   applyTheme(THEME);
@@ -841,6 +867,7 @@ syncThemeRow();
 const CONTRAST_STORAGE_KEY = "input-from-web-contrast";
 const contrastMenu = document.getElementById("contrast-menu");
 const contrastValue = document.getElementById("contrast-value");
+const contrastRow = document.getElementById("contrast-row");
 const contrastBtn = document.getElementById("contrast-btn");
 
 function applyContrast(contrast) {
@@ -852,7 +879,7 @@ function syncContrastRow() {
   setRowValue(contrastValue, "contrast_" + CONTRAST);
 }
 
-wireRowMenu(contrastMenu, contrastBtn, (value) => {
+wireRowMenu(contrastMenu, contrastRow, contrastBtn, (value) => {
   CONTRAST = value;
   localStorage.setItem(CONTRAST_STORAGE_KEY, CONTRAST);
   applyContrast(CONTRAST);
@@ -883,6 +910,7 @@ function applyThemeColor(color) {
 
 const accentMenu = document.getElementById("accent-menu");
 const accentValue = document.getElementById("accent-value");
+const accentRow = document.getElementById("accent-row");
 const accentBtn = document.getElementById("accent-btn");
 const wallpaperInput = document.getElementById("wallpaper-input");
 
@@ -893,7 +921,7 @@ function syncAccentRow() {
   else setRowText(accentValue, themeColor.toUpperCase());
 }
 
-wireRowMenu(accentMenu, accentBtn, (value) => {
+wireRowMenu(accentMenu, accentRow, accentBtn, (value) => {
   if (value === "extract") {
     // Special item: not a value, it opens the image picker.
     wallpaperInput.click();
