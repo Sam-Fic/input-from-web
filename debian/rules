@@ -3,6 +3,20 @@
 %:
 	dh $@
 
+# setup.py only exists for the macOS .app bundle; debhelper's legacy
+# python-distutils auto steps were removed in compat 12, so skip them.
+override_dh_auto_clean:
+	# nothing to clean: the build produces no artefacts here
+
+override_dh_auto_configure:
+	# nothing to configure: sources are installed as-is
+
+override_dh_auto_build:
+	# nothing to build: the wrapper runs the system python3
+
+override_dh_auto_test:
+	# unit tests run in CI, not while packaging
+
 override_dh_auto_install:
 	install -D -m 0644 pyproject.toml debian/input-from-web/usr/share/input-from-web/pyproject.toml
 	cp -a src/input_from_web debian/input-from-web/usr/share/input-from-web/
