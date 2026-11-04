@@ -43,7 +43,20 @@ jobs:
       - name: Resolve version (setuptools-scm)
         run: |
           pip install setuptools-scm
-          echo "IFW_VERSION=$(python -c 'from setuptools_scm import get_version; print(get_version(root=".", fallback_version="0.1.0"))')" >> "$GITHUB_ENV"
+          # Use the tag itself as the version. A manual dispatch from master
+          # (e.g. to retry a failed job) sits ahead of the tag, and
+          # setuptools-scm would otherwise report a 1.2.0.postN.devM version.
+          TAG="${GITHUB_REF#refs/tags/}"
+          if [ -z "$TAG" ] || [ "$TAG" = "$GITHUB_REF" ]; then
+            TAG="${{ github.event.inputs.tag }}"
+          fi
+          if [ -z "$TAG" ]; then
+            echo "Unable to determine the release tag" >&2
+            exit 1
+          fi
+          VERSION="${TAG#v}"
+          echo "IFW_VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "SETUPTOOLS_SCM_PRETEND_VERSION=$VERSION" >> "$GITHUB_ENV"
       - name: Run unit tests
         run: |
           pip install flask qrcode pytest
@@ -109,11 +122,24 @@ jobs:
       - name: Resolve version (setuptools-scm)
         run: |
           pip install setuptools-scm
-          echo "IFW_VERSION=$(python -c 'from setuptools_scm import get_version; print(get_version(root=".", fallback_version="0.1.0"))')" >> "$GITHUB_ENV"
+          # Use the tag itself as the version. A manual dispatch from master
+          # (e.g. to retry a failed job) sits ahead of the tag, and
+          # setuptools-scm would otherwise report a 1.2.0.postN.devM version.
+          TAG="${GITHUB_REF#refs/tags/}"
+          if [ -z "$TAG" ] || [ "$TAG" = "$GITHUB_REF" ]; then
+            TAG="${{ github.event.inputs.tag }}"
+          fi
+          if [ -z "$TAG" ]; then
+            echo "Unable to determine the release tag" >&2
+            exit 1
+          fi
+          VERSION="${TAG#v}"
+          echo "IFW_VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "SETUPTOOLS_SCM_PRETEND_VERSION=$VERSION" >> "$GITHUB_ENV"
       - name: Install packaging dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y debhelper dh-python pybuild-plugin-pyproject dpkg-dev
+          sudo apt-get install -y build-essential debhelper dh-python pybuild-plugin-pyproject dpkg-dev
       - name: Build .deb
         run: |
           set -euxo pipefail
@@ -145,7 +171,20 @@ jobs:
         shell: bash
         run: |
           pip install setuptools-scm
-          echo "IFW_VERSION=$(python -c 'from setuptools_scm import get_version; print(get_version(root=".", fallback_version="0.1.0"))')" >> "$GITHUB_ENV"
+          # Use the tag itself as the version. A manual dispatch from master
+          # (e.g. to retry a failed job) sits ahead of the tag, and
+          # setuptools-scm would otherwise report a 1.2.0.postN.devM version.
+          TAG="${GITHUB_REF#refs/tags/}"
+          if [ -z "$TAG" ] || [ "$TAG" = "$GITHUB_REF" ]; then
+            TAG="${{ github.event.inputs.tag }}"
+          fi
+          if [ -z "$TAG" ]; then
+            echo "Unable to determine the release tag" >&2
+            exit 1
+          fi
+          VERSION="${TAG#v}"
+          echo "IFW_VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "SETUPTOOLS_SCM_PRETEND_VERSION=$VERSION" >> "$GITHUB_ENV"
       - name: Install build dependencies
         run: |
           python -m pip install --upgrade pip
@@ -156,10 +195,13 @@ jobs:
           Get-Item icon.ico | Format-List Name, Length
       - name: Build single-file executable
         run: |
-          python -m PyInstaller --noconfirm --clean --onefile --console --name input-from-web --icon icon.ico --paths src --add-data "src/input_from_web/templates;input_from_web/templates" --add-data "src/input_from_web/static;input_from_web/static" input-from-web.py
+          python -m PyInstaller --noconfirm --clean --onefile --console --name input-from-web --icon icon.ico --runtime-hook packaging/pyinstaller_runtime_hook.py --paths src --add-data "src/input_from_web/templates;input_from_web/templates" --add-data "src/input_from_web/static;input_from_web/static" input-from-web.py
           Get-Item dist\input-from-web.exe | Format-List Name, Length
       - name: Smoke test the executable
         shell: pwsh
+        env:
+          PYTHONIOENCODING: "utf-8"
+          PYTHONUTF8: "1"
         run: |
           $ErrorActionPreference = "Stop"
           $exe = "dist\input-from-web.exe"
