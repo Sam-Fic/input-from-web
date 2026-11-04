@@ -36,10 +36,9 @@ try {
   const appTheme = document.getElementById('app-theme');
 
   // Feed the saved accent seed into <m3e-theme> immediately, BEFORE the first
-  // scheduleTokenSync() (below) mirrors tokens onto :root. Otherwise the initial
-  // sync would mirror the Material default purple (#6750A4) still sitting in
-  // appTheme.color, briefly overwriting the user color pre-applied by theme-init.js
-  // and flashing purple on first paint.
+  // scheduleTokenSync() generates the palette. Otherwise the initial sync would
+  // still use the Material default purple (#6750A4) sitting in appTheme.color,
+  // flashing the default palette before the user's seed is applied.
   if (appTheme) {
     try {
       const _saved = localStorage.getItem("input-from-web-theme-color");
@@ -50,21 +49,68 @@ try {
   // Pull getColorFromImage (used by "extract from image") from the theme module.
   const { getColorFromImage } = await import('@m3e/web/theme');
 
-  // Mirror <m3e-theme>'s generated dynamic-color tokens onto :root so the
-  // light-DOM layout (page background, text, fields) follows the accent + scheme
-  // too. m3e-theme only injects them into its own shadow root by default, so any
-  // var(--md-sys-color-*) used outside a component (e.g. body background in
-  // app.css) would otherwise keep the static baseline palette.
+  // Official Material color utilities (same algorithms as Material Theme Builder).
+  // <m3e/web>'s `variant` only re-tones the semantic roles: it feeds its scheme
+  // with CorePalette palettes (seed hue), so the expressive hue rotation
+  // (primary = seed hue + 240°, secondary + 15°, tertiary + 45°) never happens.
+  // Generate the real M3E palette here and overlay it on the theme element.
+  let M3EColor = null;
+  try {
+    M3EColor = await import('@material/material-color-utilities');
+  } catch (e) {
+    console.warn('Material color utilities unavailable; using <m3e-theme> palette.', e);
+  }
+
+  // <m3e-theme> contrast attribute -> Material contrastLevel.
+  const CONTRAST_LEVELS = { standard: 0, medium: 0.5, high: 1 };
+
+  function buildExpressiveTokens(seedHex, isDark, contrastLevel) {
+    if (!M3EColor) return null;
+    const { Hct, SchemeExpressive, MaterialDynamicColors, hexFromArgb, argbFromHex } = M3EColor;
+    const scheme = new SchemeExpressive(
+      Hct.fromInt(argbFromHex(seedHex)), isDark, contrastLevel);
+    const tokens = {};
+    for (const name of Object.getOwnPropertyNames(MaterialDynamicColors)) {
+      const color = MaterialDynamicColors[name];
+      if (!color || typeof color.getArgb !== 'function') continue;
+      tokens[`--md-sys-color-${color.name.replace(/_/g, '-')}`] =
+        hexFromArgb(color.getArgb(scheme));
+    }
+    return tokens;
+  }
+
+  // Mirror the generated tokens onto :root so the light-DOM layout (page
+  // background, text, fields) follows the same palette as the components.
+  // Inline custom properties on <m3e-theme> also win over its own :host rule,
+  // which is what keeps both halves of the UI spec-accurate and identical.
   function syncTokensToRoot() {
     if (!appTheme) return;
     const docEl = document.documentElement;
-    const cs = getComputedStyle(appTheme);
-    for (let i = 0; i < cs.length; i++) {
-      const name = cs[i];
-      if (name.startsWith('--md-sys-color-')) {
-        docEl.style.setProperty(name, cs.getPropertyValue(name));
+    const tokens = buildExpressiveTokens(
+      appTheme.color || '#6750A4',
+      appTheme.isDark,
+      CONTRAST_LEVELS[appTheme.contrast] ?? 0);
+    if (tokens) {
+      for (const [name, value] of Object.entries(tokens)) {
+        appTheme.style.setProperty(name, value);
+        docEl.style.setProperty(name, value);
+      }
+    } else {
+      // Fallback: mirror whatever <m3e-theme> generated.
+      const cs = getComputedStyle(appTheme);
+      for (let i = 0; i < cs.length; i++) {
+        const name = cs[i];
+        if (name.startsWith('--md-sys-color-')) {
+          docEl.style.setProperty(name, cs.getPropertyValue(name));
+        }
       }
     }
+    // Browser chrome follows the current surface (not the accent).
+    const meta = document.querySelector('meta[name="theme-color"]');
+    const surface = tokens
+      ? tokens['--md-sys-color-surface-container']
+      : getComputedStyle(docEl).getPropertyValue('--md-sys-color-surface-container').trim();
+    if (meta && surface) meta.setAttribute('content', surface);
   }
   const scheduleTokenSync = () =>
     requestAnimationFrame(() => requestAnimationFrame(syncTokensToRoot));
