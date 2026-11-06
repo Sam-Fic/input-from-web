@@ -48,7 +48,9 @@ try {
   if (appTheme) {
     try {
       const _saved = localStorage.getItem("input-from-web-theme-color");
-      if (_saved && _saved !== "material") appTheme.color = _saved;
+      // Validate: <m3e-theme>.color runs argbFromHex and throws on anything
+      // that is not a 6-digit hex (e.g. a stale/corrupted stored value).
+      if (_saved && _saved !== "material" && /^#[0-9a-f]{6}$/i.test(_saved)) appTheme.color = _saved;
     } catch (e) {}
   }
 
@@ -173,7 +175,7 @@ const I18N = {
     paste_key_off: "Using Ctrl+V",
     settings_title: "Settings",
     clear_label: "Clear text",
-    lang_label: "Switch language",
+    handle_label: "Drag",
     prev_label: "Previous entry",
     next_label: "Next entry",
     method_label: "Clipboard mode (copy & paste, not direct typing)",
@@ -200,6 +202,7 @@ const I18N = {
     theme_color_label: "Accent color",
     accent_default: "Default (Material)",
     theme_extract: "Extract from image",
+    theme_extract_fail: "Could not extract a color from this image",
     char_count_label: "chars",
   },
   zh: {
@@ -225,7 +228,7 @@ const I18N = {
     paste_key_off: "已恢复 Ctrl+V",
     settings_title: "设置",
     clear_label: "清除文本",
-    lang_label: "切换语言",
+    handle_label: "拖动",
     prev_label: "上一条",
     next_label: "下一条",
     method_label: "剪贴板模式（复制粘贴，而非直接键入）",
@@ -252,6 +255,7 @@ const I18N = {
     theme_color_label: "主题色",
     accent_default: "默认（Material）",
     theme_extract: "从图片提取",
+    theme_extract_fail: "无法从这张图片提取配色",
     char_count_label: "字",
   },
 };
@@ -299,6 +303,10 @@ function applyStaticI18n() {
     const el = document.getElementById(id);
     if (el) el.setAttribute("aria-label", t(key));
   }
+  // The bottom-sheet drag handle is focusable, so its accessible name must
+  // follow the UI language too (the component default is English "Drag handle").
+  const sheet = document.getElementById("settings-sheet");
+  if (sheet) sheet.setAttribute("handle-label", t("handle_label"));
 }
 
 /* --- Token: URL query > localStorage > null --- */
@@ -375,7 +383,7 @@ let histIdx = 0;
 let draft = "";
 
 function updateNav() {
-  navLeft.disabled = (histIdx === 0 && history.length === 0) || histIdx === 0;
+  navLeft.disabled = histIdx === 0;
   navRight.disabled = histIdx >= history.length;
   updateNavInfo();
 }
@@ -529,7 +537,9 @@ async function doSend() {
 }
 
 /* --- Connection State --- */
-let isConnected = false;
+// Optimistic initial state: the first /ping result arrives within milliseconds,
+// and starting as "offline" made the button flash the offline style on every load.
+let isConnected = navigator.onLine;
 let isSending = false;
 let transient = false;   // 发送成功/失败的短暂提示阶段，期间不被 ping 刷新覆盖
 
@@ -558,7 +568,7 @@ function updateButtonState() {
   }
 }
 
-setInterval(async () => {
+async function pollConnection() {
   try {
     const r = await fetch("/ping", {signal: AbortSignal.timeout(3000)});
     isConnected = r.ok;
@@ -566,9 +576,13 @@ setInterval(async () => {
     isConnected = false;
   }
   updateButtonState();
-}, 1000);
+}
 
-updateButtonState();
+// Probe immediately instead of waiting a full interval: otherwise every load
+// showed "Offline" for one second before the first /ping result arrived.
+pollConnection();
+setInterval(pollConnection, 1000);
+
 updateNavInfo();
 
 /* --- Autostart toggle --- */
@@ -632,8 +646,10 @@ const methodDependent = [autoPasteSwitch, pasteKeySwitch];
 function syncMethodDependent() {
   const isClipboard = methodSwitch.checked;
   for (const sw of methodDependent) {
+    // m3e-switch owns the official disabled visuals. The plain m3e-list-item
+    // has no disabled API (only its button/action variants do), so the row title
+    // is dimmed via the component's documented 38% label color (see app.css).
     sw.disabled = !isClipboard;
-    sw.closest("m3e-list-item").style.opacity = isClipboard ? "1" : "0.4";
   }
 }
 
@@ -661,7 +677,9 @@ function wireToggle(sw, bodyFn, okMsgFn) {
       sw.checked = !want;
       window.M3eSnackbar.open(t("autostart_neterr"));
     } finally {
-      sw.disabled = false;
+      // Clipboard-only switches stay disabled when clipboard mode is off;
+      // re-enabling them unconditionally would leave the UI inconsistent.
+      sw.disabled = methodDependent.includes(sw) && !methodSwitch.checked;
     }
   });
 }
@@ -714,13 +732,48 @@ refreshSettings();
 const settingsBtn = document.getElementById("settings-btn");
 const settingsSheet = document.getElementById("settings-sheet");
 const toggleSettings = (open) => {
-  if (open) settingsSheet.show();
-  else settingsSheet.hide();
+  if (open) {
+    settingsSheet.show();
+    // The sheet claims to show the server's truth: a profile edited from the
+    // CLI (or by another device on the same server) must not leave a stale
+    // switch behind, so re-read both endpoint states when it opens.
+    refreshSettings();
+    refreshAutostart();
+  } else {
+    settingsSheet.hide();
+  }
   settingsBtn.setAttribute("aria-expanded", String(!!open));
 };
 settingsBtn.addEventListener("click", () => toggleSettings(true));
-settingsSheet.addEventListener("opened", () => settingsBtn.setAttribute("aria-expanded", "true"));
-settingsSheet.addEventListener("closed", () => settingsBtn.setAttribute("aria-expanded", "false"));
+settingsSheet.addEventListener("toggle", (e) => {
+  const open = e.newState === "open";
+  settingsBtn.setAttribute("aria-expanded", String(open));
+  if (open) return;
+  // The component's own "closed" event is not dispatched for every dismissal
+  // (Escape can close the popover without a state event), so the native
+  // popover toggle event is the single source of truth for aria-expanded.
+  // Escape / scrim dismissal leaves focus on <body> (or, if the component is
+  // mid-transition, on a control inside the now hidden sheet). Return it to the
+  // opener so keyboard users are not stranded.
+  const returnFocus = () => {
+    // If the sheet was reopened within the same frame/timeout window, the
+    // opener must not steal focus back out of the modal.
+    if (settingsSheet.matches(":popover-open")) return;
+    const active = document.activeElement;
+    if (!active || active === document.body || active === document.documentElement
+        || settingsSheet.contains(active)) settingsBtn.focus();
+  };
+  requestAnimationFrame(returnFocus);
+  // The sheet restores focus to its last item after the close transition, so
+  // re-check once the animation has settled.
+  setTimeout(returnFocus, 400);
+  // Menus are manual popovers; a sheet dismissed with Escape/scrim does not
+  // dispatch the component's "closed" event, so hide them from the native
+  // toggle instead (otherwise one would keep floating over the page).
+  for (const menu of [langMenu, themeMenu, contrastMenu, accentMenu]) {
+    if (menu && typeof menu.hide === "function") menu.hide();
+  }
+});
 
 /* --- Settings value rows (language / theme / contrast / accent) ----------
    Every row is one m3e-list-item whose title is wrapped in an
@@ -786,7 +839,12 @@ function wireRowMenu(menu, row, button, onPick) {
   }, true);
   menu.addEventListener("click", (e) => {
     const item = e.target.closest("[data-value]");
-    if (item && menu.contains(item)) onPick(item.dataset.value);
+    if (item && menu.contains(item)) {
+      onPick(item.dataset.value);
+      // Selecting closes the menu; without this, keyboard focus was left on the
+      // hidden menu instead of the control that opened it.
+      if (button) button.focus();
+    }
   });
   menu.addEventListener("toggle", (e) => {
     if (button) button.setAttribute("aria-expanded", String(e.newState === "open"));
@@ -809,6 +867,9 @@ wireRowMenu(langMenu, langRow, langBtn, (value) => {
   localStorage.setItem(LANG_STORAGE_KEY, LANG);
   applyStaticI18n();
   updateButtonState();
+  // The nav slot is dynamic (char count / history position), not data-i18n,
+  // so it must be re-rendered explicitly or it keeps the old language.
+  updateNavInfo();
   syncLangRow();
 });
 syncLangRow();
@@ -823,7 +884,11 @@ const themeRow = document.getElementById("theme-row");
 const themeBtn = document.getElementById("theme-btn");
 
 let THEME = localStorage.getItem(THEME_STORAGE_KEY) || "auto";
+if (!["light", "dark", "auto"].includes(THEME)) THEME = "auto";
 let themeColor = localStorage.getItem(THEME_COLOR_KEY) || "material";
+// localStorage can hold anything (old builds, manual edits); an invalid seed
+// would make argbFromHex throw and abort the whole palette sync.
+if (themeColor !== "material" && !/^#[0-9a-f]{6}$/i.test(themeColor)) themeColor = "material";
 
 // Apply a theme: toggle the data-theme attribute, the native color-scheme, and
 // the mobile browser-chrome theme-color meta so everything matches.
@@ -888,6 +953,7 @@ wireRowMenu(contrastMenu, contrastRow, contrastBtn, (value) => {
 });
 
 let CONTRAST = localStorage.getItem(CONTRAST_STORAGE_KEY) || "standard";
+if (!["standard", "medium", "high"].includes(CONTRAST)) CONTRAST = "standard";
 applyContrast(CONTRAST);
 syncContrastRow();
 
@@ -946,6 +1012,8 @@ wallpaperInput.addEventListener("change", async () => {
   try {
     await img.decode();
     const hex = await getColorFromImage(img);
+    // A silent console log told the user nothing when extraction failed.
+    if (!hex) throw new Error("no color");
     themeColor = hex;
     localStorage.setItem(THEME_COLOR_KEY, themeColor);
     applyThemeColor(themeColor);
@@ -953,6 +1021,7 @@ wallpaperInput.addEventListener("change", async () => {
     applyTheme(THEME);
   } catch (e) {
     console.error("从图片提取配色失败", e);
+    window.M3eSnackbar.open(t("theme_extract_fail"));
   } finally {
     URL.revokeObjectURL(url);
     wallpaperInput.value = "";
@@ -961,14 +1030,6 @@ wallpaperInput.addEventListener("change", async () => {
 
 applyThemeColor(themeColor);
 syncAccentRow();
-
-// Menus are manual popovers, so dismiss any that is still open when the sheet
-// closes (otherwise it would float over the page on its own).
-settingsSheet.addEventListener("closed", () => {
-  for (const menu of [langMenu, themeMenu, contrastMenu, accentMenu]) {
-    if (menu && typeof menu.hide === "function") menu.hide();
-  }
-});
 
 applyStaticI18n();
 updateButtonState();

@@ -204,6 +204,9 @@
     flex-direction: column;
     /* --app-height tracks visualViewport.height (set from JS) so the layout
        fits above the keyboard on both Android (resizes-content) and iOS. */
+    /* Static fallback first: browsers without dynamic viewport units would
+       otherwise drop the whole declaration and leave the container auto-height. */
+    height: 100vh;
     height: var(--app-height, 100dvh);
     padding: 16px;
     box-sizing: border-box;
@@ -218,23 +221,16 @@
   .btn-row m3e-button {
     flex: 1;
   }
-  /* Expressive send button: amplify the built-in press shape-morph so the
-     pill visibly squishes (spring physics come from the component). */
-  .btn-row m3e-button#btn {
-    --m3e-button-shape-pressed-morph: 16px;
-  }
   /* 离线（未连接）状态：保持按钮真正 disabled（不触发按下水波、不闪现启用态的强调色），
      但把 m3e 的禁用配色令牌改写为强调色的淡色调（primary-container 家族），
      形成“在强调色家族内的灰色态”，随用户自定义的主题色与深浅模式变化。
      注意：m3e 禁用态读的是 --m3e-button-disabled-* 专属令牌（默认取生成的 onSurface），
-     而非 --md-sys-color-primary，因此需在此覆盖。opacity:1 抵消下方[disabled]的 0.38 二次变暗。 */
+     而非 --md-sys-color-primary，因此需在此覆盖。 */
   .btn-row m3e-button#btn.btn-offline {
-    opacity: 1;
     --m3e-button-disabled-container-color: var(--md-sys-color-primary-container);
     --m3e-button-disabled-label-text-color: var(--md-sys-color-on-primary-container);
     --m3e-button-disabled-icon-color: var(--md-sys-color-on-primary-container);
   }
-  /* SEND 按钮使用组件默认字体显示文字（不指定特殊图标字体，避免连字问题）。 */
   /* Success feedback: the icon flies out of the clipped wrapper and the new
      one flies back in. */
   @keyframes btn-icon-out {
@@ -371,8 +367,9 @@
     min-width: 40px;
     text-align: center;
   }
+  /* m3e 组件自带禁用态配色（容器/文字/图标各按官方 opacity 计算）；
+     这里只阻断鼠标事件，不再叠加宿主 opacity，避免二次变暗。 */
   m3e-button[disabled], m3e-icon-button[disabled] {
-    opacity: 0.38;
     pointer-events: none;
   }
   /* Segmented settings list: everything visual (surface container, 16px
@@ -383,8 +380,9 @@
     flex-shrink: 0;
   }
   .autostart-label {
-    font-size: 14px;
-    color: var(--md-sys-color-on-surface);
+    /* Typography and color inherit from <m3e-list-item> (bodyLarge 16/24/400
+       and its label color). Only the wrap/contract behaviour the component
+       cannot know about is set here. */
     flex: 1 1 auto;
     min-width: 0;
     /* The title lives in m3e-list-item's default slot (an internal column flex
@@ -393,6 +391,15 @@
        list item's 16px padding-inline-end. */
     white-space: normal;
     overflow-wrap: anywhere;
+  }
+  /* A plain m3e-list-item has no disabled API, so its title cannot inherit the
+     component's disabled label color. When the trailing m3e-switch is disabled
+     (the component publishes aria-disabled; its disabled property is not
+     reflected as an attribute), reuse the component's documented disabled
+     label color (on-surface @ 38%) from its list-item stylesheet. This is a
+     state/contrast affordance, not a host-level opacity. */
+  m3e-list-item:has(> m3e-switch[disabled], > m3e-switch[aria-disabled="true"]) .autostart-label {
+    color: color-mix(in srgb, var(--md-sys-color-on-surface) 38%, transparent);
   }
   /* Value rows (language / theme / contrast / accent) put their title inside an
      m3e-menu-trigger, which listens on its parent element - the m3e-list-item -
@@ -413,18 +420,12 @@
   .settings-option-value {
     white-space: nowrap;
   }
-  /* Bottom sheet content */
-  .sheet-header {
-    font-size: 16px;
-    font-weight: 500;
-    color: var(--md-sys-color-on-surface);
-    padding: 4px 16px 0;
-  }
+  /* Bottom sheet content. Typography (titleLarge 22/28/400 for the header,
+     bodyMedium for the body) and the header's 16px inline / 8px bottom spacing
+     come from <m3e-bottom-sheet>; nothing here re-declares them. */
   .sheet-body {
     display: flex;
     flex-direction: column;
-    gap: 4px;
-    padding: 8px 16px 20px;
     /* Height cap: the sheet's "fit" detent is measured from this box, so
        capping the body caps the whole sheet instead of overflowing the
        viewport. 90dvh keeps it inside mobile browser chrome changes; the
@@ -436,5 +437,8 @@
     overflow-y: auto;
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
-    padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+    /* The sheet body already supplies 16px inline and 8px bottom padding.
+       Only the device safe-area inset is added so the last row clears the
+       home indicator: 8px (component) + inset, no double spacing. */
+    padding-bottom: env(safe-area-inset-bottom, 0px);
   }
