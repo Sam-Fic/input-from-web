@@ -61,21 +61,6 @@ venv/bin/pip install flask qrcode
 # PYTHONPATH=src venv/bin/python -m input_from_web
 ```
 
-### From .deb package (Linux)
-
-```bash
-sudo apt install ./input-from-web_1.2.0_all.deb
-input-from-web
-```
-
-### Building the .deb
-
-```bash
-sudo apt install debhelper dh-python
-dpkg-buildpackage -us -uc -b
-# Package is created in the parent directory
-```
-
 ### macOS (from source)
 
 ```bash
@@ -90,10 +75,10 @@ venv/bin/pip install flask qrcode
 
 ### macOS (.app bundle / DMG)
 
-Download the `input-from-web-<version>-macos-<arch>.dmg` artifact from
-**GitHub Actions** (or a matching Release), open it and drag **Input from Web**
-to your Applications folder. Launching the app opens a Terminal window showing
-the QR code. See [macOS notes](#macos-notes) for the Accessibility and
+Build the `.app` bundle locally with `python setup.py py2app` (see
+[macOS notes](#macos-notes)), then open the produced `Input from Web.app` and
+drag it to your Applications folder. Launching the app opens a Terminal window
+showing the QR code. See [macOS notes](#macos-notes) for the Accessibility and
 Gatekeeper steps.
 
 ### Windows (from source)
@@ -367,8 +352,8 @@ A red warning is printed at startup. Only do this on a network you fully control
   injected via clipboard + Cmd+V.
 - **Auto-paste shortcut**: with `paste_key: "ctrl+shift+v"`, auto-paste uses
   Cmd+Shift+V (terminals, code editors).
-- **Gatekeeper**: CI builds are signed ad-hoc (no Developer ID), so macOS may
-  quarantine a downloaded build — right-click the app in Finder → **Open**, or
+- **Gatekeeper**: locally built bundles are signed ad-hoc (no Developer ID), so
+  macOS may quarantine the app — right-click the app in Finder → **Open**, or
   run `xattr -dr com.apple.quarantine "/Applications/Input from Web.app"`.
 - **Auto-start**: `--install-autostart` installs a LaunchAgent
   (`~/Library/LaunchAgents/com.input-from-web.plist`) that opens a Terminal
