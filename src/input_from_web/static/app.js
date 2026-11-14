@@ -113,11 +113,11 @@ try {
         }
       }
     }
-    // Browser chrome follows the current surface (not the accent).
+    // Browser chrome follows the page canvas (background), not the accent.
     const meta = document.querySelector('meta[name="theme-color"]');
     const surface = tokens
-      ? tokens['--md-sys-color-surface-container']
-      : getComputedStyle(docEl).getPropertyValue('--md-sys-color-surface-container').trim();
+      ? tokens['--md-sys-color-background']
+      : getComputedStyle(docEl).getPropertyValue('--md-sys-color-background').trim();
     if (meta && surface) meta.setAttribute('content', surface);
   }
   const scheduleTokenSync = () =>

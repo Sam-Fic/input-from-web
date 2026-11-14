@@ -195,7 +195,11 @@
        browser must not pan the page; the flexible input area shrinks instead. */
     overflow: hidden;
     overscroll-behavior: none;
-    background-color: var(--md-sys-color-surface-container);
+    /* Page canvas uses the *background* role, not surface-container: the sheet
+       and the menus are surface-container-low / surface-container, so painting
+       the page with a container role inverted the M3 elevation order (overlays
+       looked lighter than the page underneath). */
+    background-color: var(--md-sys-color-background);
     color: var(--md-sys-color-on-surface);
     transition: background-color 0.3s, color 0.3s;
   }
@@ -303,7 +307,8 @@
     left: 12px;
     max-width: calc(100% - 28px);
     padding: 0 6px;
-    background: var(--md-sys-color-surface-container);
+    /* Must match the page canvas so the border notch looks cut, not patched. */
+    background: var(--md-sys-color-background);
     font-size: 12px;
     line-height: 18px;
   }
