@@ -1,10 +1,18 @@
 # input-from-web
 
-Use your phone's voice dictation to type into any app on your Linux/Ubuntu, Windows, or macOS desktop.
+<div align="center">
+  <img src="icon.svg" alt="input-from-web" width="128" height="128">
+</div>
+
+[简体中文](README.zh-CN.md)
+
+---
+
+Use your phone's voice dictation to type into any app on your Linux, Windows, or macOS desktop.
 
 ## Motivation
 
-Phone keyboards have excellent voice-to-text engines (Google, Apple, Samsung) that
+Phone keyboards have excellent voice-to-text engines that
 are far better than anything available natively on Linux desktops. This tool bridges
 the gap: it runs a tiny web server on your computer, you open it on your phone,
 dictate text, and it gets injected into whatever app is focused on your desktop.
