@@ -59,9 +59,9 @@ try {
 
   // Official Material color utilities (same algorithms as Material Theme Builder).
   // <m3e/web>'s `variant` only re-tones the semantic roles: it feeds its scheme
-  // with CorePalette palettes (seed hue), so the expressive hue rotation
-  // (primary = seed hue + 240°, secondary + 15°, tertiary + 45°) never happens.
-  // Generate the real M3E palette here and overlay it on the theme element.
+  // with source-color palettes (seed hue), so the per-variant hue/chroma rotation
+  // (e.g. expressive primary = seed hue + 240°) never happens. Generate the real
+  // palette for the selected variant here and overlay it on the theme element.
   let M3EColor = null;
   try {
     M3EColor = await import('@material/material-color-utilities');
@@ -72,10 +72,26 @@ try {
   // <m3e-theme> contrast attribute -> Material contrastLevel.
   const CONTRAST_LEVELS = { standard: 0, medium: 0.5, high: 1 };
 
-  function buildExpressiveTokens(seedHex, isDark, contrastLevel) {
+  // <m3e-theme variant="..."> -> the matching scheme class from the official
+  // Material color utilities. Both libraries use the same variant names, so the
+  // overlay below reproduces exactly the variant the user picked.
+  const SCHEME_CLASSES = {
+    monochrome: "SchemeMonochrome",
+    neutral: "SchemeNeutral",
+    "tonal-spot": "SchemeTonalSpot",
+    vibrant: "SchemeVibrant",
+    expressive: "SchemeExpressive",
+    fidelity: "SchemeFidelity",
+    content: "SchemeContent",
+    rainbow: "SchemeRainbow",
+    "fruit-salad": "SchemeFruitSalad",
+  };
+
+  function buildSchemeTokens(seedHex, isDark, contrastLevel, variant) {
     if (!M3EColor) return null;
-    const { Hct, SchemeExpressive, MaterialDynamicColors, hexFromArgb, argbFromHex } = M3EColor;
-    const scheme = new SchemeExpressive(
+    const { Hct, MaterialDynamicColors, hexFromArgb, argbFromHex } = M3EColor;
+    const SchemeClass = M3EColor[SCHEME_CLASSES[variant]] || M3EColor.SchemeExpressive;
+    const scheme = new SchemeClass(
       Hct.fromInt(argbFromHex(seedHex)), isDark, contrastLevel);
     const tokens = {};
     for (const name of Object.getOwnPropertyNames(MaterialDynamicColors)) {
@@ -94,10 +110,11 @@ try {
   function syncTokensToRoot() {
     if (!appTheme) return;
     const docEl = document.documentElement;
-    const tokens = buildExpressiveTokens(
+    const tokens = buildSchemeTokens(
       appTheme.color || '#6750A4',
       appTheme.isDark,
-      CONTRAST_LEVELS[appTheme.contrast] ?? 0);
+      CONTRAST_LEVELS[appTheme.contrast] ?? 0,
+      appTheme.variant || 'expressive');
     if (tokens) {
       for (const [name, value] of Object.entries(tokens)) {
         appTheme.style.setProperty(name, value);
@@ -201,8 +218,24 @@ const I18N = {
     contrast_high: "High",
     theme_color_label: "Accent color",
     accent_default: "Default (Material)",
+    accent_blue: "Blue",
+    accent_teal: "Teal",
+    accent_green: "Green",
+    accent_amber: "Amber",
+    accent_red: "Red",
+    accent_rose: "Rose",
     theme_extract: "Extract from image",
     theme_extract_fail: "Could not extract a color from this image",
+    scheme_switch_label: "Color scheme",
+    scheme_expressive: "Expressive",
+    scheme_tonal_spot: "Tonal spot",
+    scheme_vibrant: "Vibrant",
+    scheme_neutral: "Neutral",
+    scheme_monochrome: "Monochrome",
+    scheme_fidelity: "Fidelity",
+    scheme_content: "Content",
+    scheme_rainbow: "Rainbow",
+    scheme_fruit_salad: "Fruit salad",
     char_count_label: "chars",
   },
   zh: {
@@ -254,8 +287,24 @@ const I18N = {
     contrast_high: "高",
     theme_color_label: "主题色",
     accent_default: "默认（Material）",
+    accent_blue: "蓝色",
+    accent_teal: "青色",
+    accent_green: "绿色",
+    accent_amber: "琥珀",
+    accent_red: "红色",
+    accent_rose: "玫红",
     theme_extract: "从图片提取",
     theme_extract_fail: "无法从这张图片提取配色",
+    scheme_switch_label: "配色方案",
+    scheme_expressive: "Expressive",
+    scheme_tonal_spot: "色调点",
+    scheme_vibrant: "鲜艳",
+    scheme_neutral: "中性",
+    scheme_monochrome: "单色",
+    scheme_fidelity: "高保真",
+    scheme_content: "内容",
+    scheme_rainbow: "彩虹",
+    scheme_fruit_salad: "水果沙拉",
     char_count_label: "字",
   },
 };
@@ -770,7 +819,7 @@ settingsSheet.addEventListener("toggle", (e) => {
   // Menus are manual popovers; a sheet dismissed with Escape/scrim does not
   // dispatch the component's "closed" event, so hide them from the native
   // toggle instead (otherwise one would keep floating over the page).
-  for (const menu of [langMenu, themeMenu, contrastMenu, accentMenu]) {
+  for (const menu of [langMenu, themeMenu, contrastMenu, accentMenu, schemeMenu]) {
     if (menu && typeof menu.hide === "function") menu.hide();
   }
 });
@@ -888,7 +937,11 @@ if (!["light", "dark", "auto"].includes(THEME)) THEME = "auto";
 let themeColor = localStorage.getItem(THEME_COLOR_KEY) || "material";
 // localStorage can hold anything (old builds, manual edits); an invalid seed
 // would make argbFromHex throw and abort the whole palette sync.
-if (themeColor !== "material" && !/^#[0-9a-f]{6}$/i.test(themeColor)) themeColor = "material";
+if (themeColor !== "material") {
+  if (!/^#[0-9a-f]{6}$/i.test(themeColor)) themeColor = "material";
+  // Normalize so the preset menu values (#RRGGBB) match exactly.
+  else themeColor = themeColor.toUpperCase();
+}
 
 // Apply a theme: toggle the data-theme attribute, the native color-scheme, and
 // the mobile browser-chrome theme-color meta so everything matches.
@@ -957,10 +1010,44 @@ if (!["standard", "medium", "high"].includes(CONTRAST)) CONTRAST = "standard";
 applyContrast(CONTRAST);
 syncContrastRow();
 
+/* --- Color scheme (MD3 variants) ---
+   Drives <m3e-theme>'s variant attribute, which selects the palette-generation
+   variant. The overlay palette is rebuilt with the matching Material scheme
+   class (SCHEME_CLASSES). Purely a UI preference, persisted in localStorage. */
+const SCHEME_STORAGE_KEY = "input-from-web-theme-scheme";
+const SCHEME_VARIANTS = Object.keys(SCHEME_CLASSES);
+const schemeMenu = document.getElementById("scheme-menu");
+const schemeValue = document.getElementById("scheme-value");
+const schemeRow = document.getElementById("scheme-row");
+const schemeBtn = document.getElementById("scheme-btn");
+
+let SCHEME = localStorage.getItem(SCHEME_STORAGE_KEY) || "expressive";
+if (!SCHEME_VARIANTS.includes(SCHEME)) SCHEME = "expressive";
+
+function applyScheme(variant) {
+  // Setting the attribute triggers the MutationObserver -> token resync.
+  if (appTheme) appTheme.setAttribute("variant", variant);
+}
+
+function syncSchemeRow() {
+  markMenuChecked(schemeMenu, SCHEME);
+  setRowValue(schemeValue, "scheme_" + SCHEME.replace(/-/g, "_"));
+}
+
+wireRowMenu(schemeMenu, schemeRow, schemeBtn, (value) => {
+  SCHEME = value;
+  localStorage.setItem(SCHEME_STORAGE_KEY, SCHEME);
+  applyScheme(SCHEME);
+  syncSchemeRow();
+});
+
+applyScheme(SCHEME);
+syncSchemeRow();
+
 /* --- Accent color (theme color) ---
-   The seed comes either from the Material baseline ("material") or from a
-   user-picked image via getColorFromImage. The full palette is derived from that
-   seed by <m3e-theme> (see applyThemeColor). */
+   The seed comes from the Material baseline ("material"), one of the built-in
+   presets, or a user-picked image via getColorFromImage. The full palette is
+   derived from that seed by <m3e-theme> (see applyThemeColor). */
 
 // Apply a custom accent (hex) or fall back to the Material baseline ("material").
 // The full primary/secondary/tertiary/neutral/surface palette is generated by
@@ -980,10 +1067,17 @@ const accentRow = document.getElementById("accent-row");
 const accentBtn = document.getElementById("accent-btn");
 const wallpaperInput = document.getElementById("wallpaper-input");
 
+// The menu item's data-i18n key doubles as the localized name of each preset.
+const ACCENT_LABELS = new Map(
+  Array.from(accentMenu.querySelectorAll("m3e-menu-item-radio"))
+    .map(item => [item.dataset.value, item.dataset.i18n])
+);
+
 function syncAccentRow() {
-  const isMaterial = !themeColor || themeColor === "material";
-  markMenuChecked(accentMenu, isMaterial ? "material" : null);
-  if (isMaterial) setRowValue(accentValue, "accent_default");
+  markMenuChecked(accentMenu, themeColor);
+  const labelKey = ACCENT_LABELS.get(themeColor);
+  // Presets and "material" carry i18n keys; an extracted custom seed shows hex.
+  if (labelKey) setRowValue(accentValue, labelKey);
   else setRowText(accentValue, themeColor.toUpperCase());
 }
 
@@ -993,7 +1087,7 @@ wireRowMenu(accentMenu, accentRow, accentBtn, (value) => {
     wallpaperInput.click();
     return;
   }
-  themeColor = value;
+  themeColor = value === "material" ? value : value.toUpperCase();
   localStorage.setItem(THEME_COLOR_KEY, themeColor);
   applyThemeColor(themeColor);
   applyTheme(THEME);
@@ -1014,7 +1108,7 @@ wallpaperInput.addEventListener("change", async () => {
     const hex = await getColorFromImage(img);
     // A silent console log told the user nothing when extraction failed.
     if (!hex) throw new Error("no color");
-    themeColor = hex;
+    themeColor = hex.toUpperCase();
     localStorage.setItem(THEME_COLOR_KEY, themeColor);
     applyThemeColor(themeColor);
     syncAccentRow();

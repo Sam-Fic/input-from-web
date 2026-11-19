@@ -35,6 +35,11 @@
     if (_th === "light" || _th === "dark") _t.setAttribute("scheme", _th);
     var _k = localStorage.getItem("input-from-web-contrast");
     if (_k === "medium" || _k === "high") _t.setAttribute("contrast", _k);
+    // Saved color-scheme variant, same whitelist <m3e-theme> accepts.
+    var _v = localStorage.getItem("input-from-web-theme-scheme");
+    if (_v && /^(monochrome|neutral|tonal-spot|vibrant|expressive|fidelity|content|rainbow|fruit-salad)$/.test(_v)) {
+      _t.setAttribute("variant", _v);
+    }
   } catch (e) {}
 </script>
 <div class="app-container">
@@ -154,6 +159,15 @@
           <span class="settings-option-value" id="accent-value" data-i18n="accent_default">默认（Material）</span>
         </m3e-button>
       </m3e-list-item>
+
+      <m3e-list-item id="scheme-row" class="settings-option-row">
+        <m3e-menu-trigger for="scheme-menu">
+          <span class="autostart-label" id="scheme-label" data-i18n="scheme_switch_label">配色方案</span>
+        </m3e-menu-trigger>
+        <m3e-button slot="trailing" variant="text" size="small" id="scheme-btn" aria-labelledby="scheme-label scheme-value">
+          <span class="settings-option-value" id="scheme-value" data-i18n="scheme_expressive">Expressive</span>
+        </m3e-button>
+      </m3e-list-item>
     </m3e-list>
 
     <input type="file" id="wallpaper-input" accept="image/*" hidden>
@@ -184,10 +198,28 @@
 
   <m3e-menu id="accent-menu" position-x="before" position-y="below" aria-labelledby="accent-label">
     <m3e-menu-item-radio data-value="material" data-i18n="accent_default">默认（Material）</m3e-menu-item-radio>
+    <m3e-menu-item-radio data-value="#0061A4" data-i18n="accent_blue">蓝色</m3e-menu-item-radio>
+    <m3e-menu-item-radio data-value="#00696D" data-i18n="accent_teal">青色</m3e-menu-item-radio>
+    <m3e-menu-item-radio data-value="#006E1C" data-i18n="accent_green">绿色</m3e-menu-item-radio>
+    <m3e-menu-item-radio data-value="#8B5000" data-i18n="accent_amber">琥珀</m3e-menu-item-radio>
+    <m3e-menu-item-radio data-value="#B3261E" data-i18n="accent_red">红色</m3e-menu-item-radio>
+    <m3e-menu-item-radio data-value="#A0356B" data-i18n="accent_rose">玫红</m3e-menu-item-radio>
     <m3e-menu-item data-value="extract">
       <m3e-icon slot="icon" name="image" variant="outlined"></m3e-icon>
       <span data-i18n="theme_extract">从图片提取</span>
     </m3e-menu-item>
+  </m3e-menu>
+
+  <m3e-menu id="scheme-menu" position-x="before" position-y="below" aria-labelledby="scheme-label">
+    <m3e-menu-item-radio data-value="expressive" data-i18n="scheme_expressive">Expressive</m3e-menu-item-radio>
+    <m3e-menu-item-radio data-value="tonal-spot" data-i18n="scheme_tonal_spot">色调点</m3e-menu-item-radio>
+    <m3e-menu-item-radio data-value="vibrant" data-i18n="scheme_vibrant">鲜艳</m3e-menu-item-radio>
+    <m3e-menu-item-radio data-value="neutral" data-i18n="scheme_neutral">中性</m3e-menu-item-radio>
+    <m3e-menu-item-radio data-value="monochrome" data-i18n="scheme_monochrome">单色</m3e-menu-item-radio>
+    <m3e-menu-item-radio data-value="fidelity" data-i18n="scheme_fidelity">高保真</m3e-menu-item-radio>
+    <m3e-menu-item-radio data-value="content" data-i18n="scheme_content">内容</m3e-menu-item-radio>
+    <m3e-menu-item-radio data-value="rainbow" data-i18n="scheme_rainbow">彩虹</m3e-menu-item-radio>
+    <m3e-menu-item-radio data-value="fruit-salad" data-i18n="scheme_fruit_salad">水果沙拉</m3e-menu-item-radio>
   </m3e-menu>
 </m3e-bottom-sheet>
 
